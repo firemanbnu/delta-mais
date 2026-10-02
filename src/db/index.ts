@@ -60,4 +60,14 @@ export function getDb(): Database {
   return global.__escalaDb;
 }
 
+/**
+ * Entrega um banco já pronto para o resto do app. Usado nos testes, que sobem
+ * um PGlite em memória com as migrações já aplicadas.
+ */
+export function usarBanco(db: Database, cliente?: PGlite): void {
+  const global = globalThis as CacheGlobal;
+  global.__escalaDb = db;
+  if (cliente) global.__escalaPglite = cliente;
+}
+
 export { schema };
