@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
 import { BotaoLink } from "@/components/ui/link-button";
@@ -60,8 +60,19 @@ export default async function PaginaImprimir({
           <ArrowLeft data-icon="inline-start" />
           Voltar para a escala
         </BotaoLink>
-        <BotaoImprimir />
+        <div className="flex items-center gap-2">
+          <BotaoLink variant="outline" size="sm" href={`${caminho}/exportar`}>
+            <Download data-icon="inline-start" />
+            Baixar CSV
+          </BotaoLink>
+          <BotaoImprimir />
+        </div>
       </div>
+
+      <p className="sem-impressao mb-4 text-sm text-muted-foreground">
+        Para gerar o arquivo, escolha <strong>Salvar como PDF</strong> como destino da impressão. A
+        folha sai em A4 paisagem.
+      </p>
 
       <article className="impressao rounded-xl border bg-white p-8 text-black">
         <header className="border-b-2 border-black pb-3">

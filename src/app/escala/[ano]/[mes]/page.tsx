@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CircleAlert,
   CircleCheck,
+  Download,
   Info,
   Printer,
   TriangleAlert,
@@ -135,6 +136,15 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           >
             <Printer data-icon="inline-start" />
             Imprimir / PDF
+          </BotaoLink>
+
+          <BotaoLink
+            variant="outline"
+            size="sm"
+            href={`${caminho(anoNum, mesNum)}/exportar`}
+          >
+            <Download data-icon="inline-start" />
+            CSV
           </BotaoLink>
 
           <BarraAcoes
