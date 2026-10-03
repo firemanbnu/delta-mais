@@ -42,3 +42,8 @@ next-env.d.ts
 
 # banco local de desenvolvimento (PGlite)
 /.data
+
+# O template de ambiente precisa ser versionado, e a regra acima o cobre.
+# Fica por último de propósito: no gitignore a última regra que casa é a que vale.
+!.env.example
+
