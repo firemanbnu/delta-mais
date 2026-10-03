@@ -3,7 +3,7 @@ import { sql, eq } from "drizzle-orm";
 import { getDb } from "./index";
 import { garantirTimePadrao, semearPostos } from "./repositorio";
 import { posts, settings } from "./schema";
-import { POSTOS_PADRAO } from "@/lib/dominio";
+import { POSTOS_PADRAO, ROTULO_NOITE_DE_SERVICO } from "@/lib/dominio";
 
 async function main() {
   const db = getDb();
@@ -26,6 +26,7 @@ async function main() {
   console.log(
     `→ Plantão ${config.turnoInicio} às ${config.turnoFim} · âncora do 12x36: ${config.dataAncora}`,
   );
+  console.log(`→ Noites de serviço: ${ROTULO_NOITE_DE_SERVICO[config.noiteDeServico]}`);
   console.log("✓ Seed concluído");
 }
 

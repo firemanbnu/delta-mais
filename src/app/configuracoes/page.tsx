@@ -18,10 +18,10 @@ export default async function PaginaConfiguracoes() {
   const ano = hoje.getFullYear();
   const mes = hoje.getMonth() + 1;
   const ancora = String(config.dataAncora).slice(0, 10);
-const hojeISO = paraISO(hoje);
+  const hojeISO = paraISO(hoje);
   const dias = diasDoMes(ano, mes);
   const proximos = dias
-    .filter((d) => paraISO(d) >= hojeISO && ehNoiteDeServico(d, ancora))
+    .filter((d) => paraISO(d) >= hojeISO && ehNoiteDeServico(d, ancora, config.noiteDeServico))
     .slice(0, 6);
 
   return (
@@ -37,6 +37,7 @@ const hojeISO = paraISO(hoje);
             turnoInicio: String(config.turnoInicio).slice(0, 5),
             turnoFim: String(config.turnoFim).slice(0, 5),
             dataAncora: ancora,
+            noiteDeServico: config.noiteDeServico,
             observacoes: config.observacoes,
           }}
           ancoraISO={ancora}

@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { getDb } from "./index";
-import { POSTOS_PADRAO } from "@/lib/dominio";
+import { POSTOS_PADRAO, type NoiteDeServico } from "@/lib/dominio";
 import { chaveAnoMes, paraISO, type AnoMes } from "@/lib/calendario";
 import {
   avancarRodizio,
@@ -161,6 +161,7 @@ export async function salvarConfiguracoes(
     turnoInicio: string;
     turnoFim: string;
     dataAncora: string;
+    noiteDeServico: NoiteDeServico;
     equipeId: number | null;
     observacoes: string | null;
   }>,
@@ -173,6 +174,7 @@ export async function salvarConfiguracoes(
       turnoInicio: dados.turnoInicio ?? atual.turnoInicio,
       turnoFim: dados.turnoFim ?? atual.turnoFim,
       dataAncora: dados.dataAncora ?? atual.dataAncora,
+      noiteDeServico: dados.noiteDeServico ?? atual.noiteDeServico,
       equipeId: dados.equipeId === undefined ? atual.equipeId : dados.equipeId,
       observacoes: dados.observacoes === undefined ? atual.observacoes : dados.observacoes,
       atualizadoEm: new Date(),

@@ -1,18 +1,38 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
 
 import { salvarConfiguracoesAction } from "@/app/acoes/configuracoes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  ancoraDoCiclo,
+  formatarDataBR,
+  paraISO,
+  proximaNoiteDeServico,
+  somarDias,
+} from "@/lib/calendario";
+import {
+  NOITES_DE_SERVICO,
+  ROTULO_NOITE_DE_SERVICO,
+  type NoiteDeServico,
+} from "@/lib/dominio";
 
 type Config = {
   turnoInicio: string;
   turnoFim: string;
   dataAncora: string;
+  noiteDeServico: NoiteDeServico;
   observacoes: string | null;
 };
 
@@ -24,6 +44,25 @@ export function FormConfiguracoes({
   ancoraISO: string;
 }) {
   const [estado, submeter, pendente] = useActionState(salvarConfiguracoesAction, null);
+  const [noiteDeServico, setNoiteDeServico] = useState<NoiteDeServico>(config.noiteDeServico);
+  const [dataAncora, setDataAncora] = useState(ancoraISO);
+
+  const referencia = dataAncora || ancoraISO;
+  const inicioDoCiclo = useMemo(
+    () => ancoraDoCiclo(referencia, noiteDeServico),
+    [referencia, noiteDeServico],
+  );
+  const proximas = useMemo(() => {
+    const saida: Date[] = [];
+    let cursor = new Date();
+    for (let i = 0; i < 4; i++) {
+      cursor = proximaNoiteDeServico(cursor, referencia, noiteDeServico);
+      saida.push(cursor);
+      cursor = somarDias(cursor, 1);
+    }
+    return saida;
+  }, [referencia, noiteDeServico]);
+  const cicloDeslocado = paraISO(inicioDoCiclo) !== referencia;
 
   return (
     <Card className="impressao">
@@ -55,17 +94,60 @@ export function FormConfiguracoes({
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="noiteDeServico">Noites de serviço caem nos dias</Label>
+            <Select
+              name="noiteDeServico"
+              value={noiteDeServico}
+              onValueChange={(valor) =>
+                setNoiteDeServico((valor as NoiteDeServico | null) ?? config.noiteDeServico)
+              }
+            >
+              <SelectTrigger id="noiteDeServico" className="w-full sm:max-w-xs">
+                <SelectValue placeholder="Escolha ímpares ou pares" />
+              </SelectTrigger>
+              <SelectContent>
+                {NOITES_DE_SERVICO.map((opcao) => (
+                  <SelectItem key={opcao} value={opcao}>
+                    {ROTULO_NOITE_DE_SERVICO[opcao]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Define se a equipe entra de plantão em dias ímpares ou pares do mês. Trocar esta opção
+              inverte todas as marcações de serviço.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="dataAncora">Noite de referência do 12x36</Label>
             <Input
               id="dataAncora"
               name="dataAncora"
               type="date"
-              defaultValue={ancoraISO}
+              value={dataAncora}
+              onChange={(evento) => setDataAncora(evento.target.value)}
               required
             />
             <p className="text-xs text-muted-foreground">
-              A data em que a equipe entra de plantão. Contando a partir dela, noites alternadas são
-              de serviço e as demais de folga. Ao mudar esta data, as marcações do mês mudam.
+              Contando a partir dela, noites alternadas são de serviço e as demais de folga. Quando a
+              paridade escolhida não bate com a desta data, o ciclo começa um dia depois para as
+              noites caírem sempre nos dias pedidos.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-2">
+            <p className="text-sm font-medium">Assim ficará o calendário</p>
+            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              {proximas.map((dia) => (
+                <li key={paraISO(dia)}>{formatarDataBR(dia)}</li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {cicloDeslocado
+                ? `Com esta configuração o ciclo começa em ${formatarDataBR(inicioDoCiclo)}.`
+                : `O ciclo começa em ${formatarDataBR(inicioDoCiclo)}.`}{" "}
+              Salve para aplicar na escala.
             </p>
           </div>
 

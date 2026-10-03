@@ -20,6 +20,14 @@ export const ROTULOS_AUSENCIA: Record<TipoAusencia, string> = {
   DISPENSA: "Dispensa",
 };
 
+export const NOITES_DE_SERVICO = ["IMPAR", "PAR"] as const;
+export type NoiteDeServico = (typeof NOITES_DE_SERVICO)[number];
+
+export const ROTULO_NOITE_DE_SERVICO: Record<NoiteDeServico, string> = {
+  IMPAR: "Dias ímpares",
+  PAR: "Dias pares",
+};
+
 export type DefinicaoPosto = {
   codigo: string;
   unidade: Unidade;

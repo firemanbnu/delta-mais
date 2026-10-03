@@ -2,7 +2,7 @@
 
 Escala de plantão noturno 12x36. Cada noite de serviço é uma data-âncora; a
 rotação de 12 dias de serviço e 36 de folga sai da âncora configurada em
-Configurações.
+Configurações, junto com a escolha de dias pares ou ímpares do mês.
 
 O app monta a escala do mês, deixa o bombeiro ocupar cada vaga, publica o mês
 e exporta para CSV ou para impressão.
@@ -94,6 +94,14 @@ npm run db:migrate   # com o .env.local apontando para o banco de preview
 ```
 
 O app continua lendo `process.env.DATABASE_URL`; não há código de branching.
+
+### Paridade das noites de serviço
+
+`settings.noite_de_servico` guarda `IMPAR` ou `PAR`: em que dias do mês a equipe
+entra de plantão. O 12x36 continua um ciclo de 48h, então quando a paridade
+escolhida não bate com a da data-âncora, `ancoraDoCiclo()` anda a âncora um dia
+(`src/lib/calendario.ts`). Assim as noites caem sempre nos dias pedidos sem
+nunca dar duas noites seguidas, nem na virada de meses de 31 dias.
 
 ### Observações de produção
 

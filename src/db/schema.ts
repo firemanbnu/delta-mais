@@ -12,6 +12,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import { NOITES_DE_SERVICO } from "../lib/dominio";
+
 export const enumFuncao = pgEnum("funcao", ["CE", "LR", "MC", "BA", "RE"]);
 export const enumUnidade = pgEnum("unidade", ["F2", "F3", "CRS"]);
 export const enumGrupoPosto = pgEnum("grupo_posto", ["MC", "BA_RE", "FIXO"]);
@@ -22,6 +24,7 @@ export const enumTipoAusencia = pgEnum("tipo_ausencia", [
   "ATESTADO",
   "DISPENSA",
 ]);
+export const enumNoiteDeServico = pgEnum("noite_de_servico", NOITES_DE_SERVICO);
 
 export const teams = pgTable("teams", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -138,6 +141,7 @@ export const settings = pgTable("settings", {
   turnoInicio: time("turno_inicio").notNull().default("19:00:00"),
   turnoFim: time("turno_fim").notNull().default("07:00:00"),
   dataAncora: date("data_ancora").notNull().default("2026-01-02"),
+  noiteDeServico: enumNoiteDeServico("noite_de_servico").notNull().default("PAR"),
   equipeId: integer("equipe_id").references(() => teams.id, { onDelete: "set null" }),
   observacoes: text("observacoes"),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true })

@@ -69,7 +69,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
   if (!escala) notFound();
 
   const anterior = await PeriodoAnterior({ ano: anoNum, mes: mesNum });
-  const noites = noitesDeServicoNoMes(anoNum, mesNum, config.dataAncora);
+  const noites = noitesDeServicoNoMes(anoNum, mesNum, config.dataAncora, config.noiteDeServico);
   const erros = escala.problemas.filter((p) => p.severidade === "erro");
   const avisos = escala.problemas.filter((p) => p.severidade === "aviso");
 
@@ -264,7 +264,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
         <ol className="mt-3 flex flex-wrap gap-1.5">
           {Array.from({ length: new Date(anoNum, mesNum, 0).getDate() }, (_, i) => {
             const dia = new Date(anoNum, mesNum - 1, i + 1, 12);
-            const servico = ehNoiteDeServico(dia, config.dataAncora);
+            const servico = ehNoiteDeServico(dia, config.dataAncora, config.noiteDeServico);
             return (
               <li
                 key={paraISO(dia)}

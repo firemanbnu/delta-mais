@@ -54,11 +54,12 @@ export default async function Painel() {
   const vigente = await periodoVigente(hoje);
   const escala = vigente ? await montarEscala(vigente) : null;
 
-  const emServico = ehNoiteDeServico(hoje, config.dataAncora);
+  const emServico = ehNoiteDeServico(hoje, config.dataAncora, config.noiteDeServico);
   // Quando hoje é noite de serviço, a próxima é a outra — não a de hoje.
   const proxima = proximaNoiteDeServico(
     emServico ? somarDias(hoje, 1) : hoje,
     config.dataAncora,
+    config.noiteDeServico,
   );
   const nomesPorId = new Map(escala?.pessoas.map((p) => [p.id, p.nome]) ?? []);
 

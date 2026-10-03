@@ -69,7 +69,7 @@ export default async function PaginaEscalas() {
           const escala = escalas[indice];
           const erros = escala?.problemas.filter((p) => p.severidade === "erro").length ?? 0;
           const noites = diasDoMes(periodo.ano, periodo.mes).filter((d) =>
-            ehNoiteDeServico(d, config.dataAncora),
+            ehNoiteDeServico(d, config.dataAncora, config.noiteDeServico),
           ).length;
           const nomesPorId = new Map(escala?.pessoas.map((p) => [p.id, p.nome]) ?? []);
 

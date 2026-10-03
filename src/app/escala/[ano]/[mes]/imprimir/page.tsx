@@ -156,12 +156,12 @@ export default async function PaginaImprimir({
                   <td
 key={paraISO(dia)}
                     className={`border border-black px-1 py-1 ${
-                      ehNoiteDeServico(dia, config.dataAncora)
+                      ehNoiteDeServico(dia, config.dataAncora, config.noiteDeServico)
                         ? "bg-black font-bold text-white"
                         : "text-neutral-400"
                     }`}
                   >
-                    {ehNoiteDeServico(dia, config.dataAncora) ? "●" : "○"}
+                    {ehNoiteDeServico(dia, config.dataAncora, config.noiteDeServico) ? "●" : "○"}
                   </td>
                 ))}
               </tr>

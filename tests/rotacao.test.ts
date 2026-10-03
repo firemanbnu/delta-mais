@@ -17,6 +17,7 @@ import {
   type Funcao,
 } from "../src/lib/dominio";
 import {
+  ancoraDoCiclo,
   chaveAnoMes,
   diasDoMes,
   diffDias,
@@ -413,40 +414,41 @@ describe("calendário 12x36", () => {
   const ancora = new Date(2026, 0, 2, 12);
 
   it("trabalha a noite de 2 e folga a de 3, repetindo", () => {
-    expect(ehNoiteDeServico(new Date(2026, 0, 2, 12), ancora)).toBe(true);
-    expect(ehNoiteDeServico(new Date(2026, 0, 3, 12), ancora)).toBe(false);
-    expect(ehNoiteDeServico(new Date(2026, 0, 4, 12), ancora)).toBe(true);
-    expect(ehNoiteDeServico(new Date(2026, 0, 8, 12), ancora)).toBe(true);
+    expect(ehNoiteDeServico(new Date(2026, 0, 2, 12), ancora, "PAR")).toBe(true);
+    expect(ehNoiteDeServico(new Date(2026, 0, 3, 12), ancora, "PAR")).toBe(false);
+    expect(ehNoiteDeServico(new Date(2026, 0, 4, 12), ancora, "PAR")).toBe(true);
+    expect(ehNoiteDeServico(new Date(2026, 0, 8, 12), ancora, "PAR")).toBe(true);
   });
 
   it("funciona com datas anteriores à âncora (2 jan é serviço, 1 jan é folga)", () => {
-    expect(ehNoiteDeServico(new Date(2026, 0, 2, 12), ancora)).toBe(true);
-    expect(ehNoiteDeServico(new Date(2026, 0, 1, 12), ancora)).toBe(false);
-    expect(ehNoiteDeServico(new Date(2025, 11, 31, 12), ancora)).toBe(true);
-    expect(ehNoiteDeServico(new Date(2025, 11, 30, 12), ancora)).toBe(false);
+    expect(ehNoiteDeServico(new Date(2026, 0, 2, 12), ancora, "PAR")).toBe(true);
+    expect(ehNoiteDeServico(new Date(2026, 0, 1, 12), ancora, "PAR")).toBe(false);
+    expect(ehNoiteDeServico(new Date(2025, 11, 31, 12), ancora, "PAR")).toBe(true);
+    expect(ehNoiteDeServico(new Date(2025, 11, 30, 12), ancora, "PAR")).toBe(false);
   });
 
   it("mantém o padrão para trás e para frente da âncora", () => {
     for (const deslocamento of [-730, -60, -30, -10, -2, 0, 2, 10, 30, 60, 730]) {
-      expect(ehNoiteDeServico(new Date(2026, 0, 2 + deslocamento, 12), ancora)).toBe(true);
+      expect(ehNoiteDeServico(new Date(2026, 0, 2 + deslocamento, 12), ancora, "PAR")).toBe(true);
     }
   });
 
   it("dá 15 noites de serviço em um mês de 30 dias", () => {
-    expect(noitesDeServicoNoMes(2026, 4, ancora)).toHaveLength(15);
-    expect(noitesDeServicoNoMes(2026, 0, ancora)).toHaveLength(16);
+    expect(noitesDeServicoNoMes(2026, 4, ancora, "PAR")).toHaveLength(15);
+    expect(noitesDeServicoNoMes(2026, 0, ancora, "PAR")).toHaveLength(16);
   });
 
   it("mantém o padrão quando o mês vira (2, 4, 6, 8... sem pular noites)", () => {
     const SERVICES = new Set(
-      [...noitesDeServicoNoMes(2026, 3, ancora), ...noitesDeServicoNoMes(2026, 4, ancora)].map(
-        paraISO,
-      ),
+      [
+        ...noitesDeServicoNoMes(2026, 3, ancora, "PAR"),
+        ...noitesDeServicoNoMes(2026, 4, ancora, "PAR"),
+      ].map(paraISO),
     );
     const abril = SERVICES;
     const todas = [
-      ...noitesDeServicoNoMes(2026, 3, ancora),
-      ...noitesDeServicoNoMes(2026, 4, ancora),
+      ...noitesDeServicoNoMes(2026, 3, ancora, "PAR"),
+      ...noitesDeServicoNoMes(2026, 4, ancora, "PAR"),
     ].map(paraISO);
 
     // Duas noites de serviço nunca podem ficar a mais de 2 dias de distância.
@@ -456,6 +458,86 @@ describe("calendário 12x36", () => {
     }
     expect(abril.has("2026-04-02")).toBe(true);
     expect(abril.has("2026-04-04")).toBe(true);
+  });
+});
+
+describe("paridade ímpar/par das noites de serviço", () => {
+  const ancoraPar = new Date(2026, 0, 2, 12);
+  const ancoraImpar = new Date(2026, 0, 3, 12);
+
+  it("desloca a âncora em um dia quando a paridade pedida não bate com a dela", () => {
+    expect(paraISO(ancoraDoCiclo(ancoraPar, "PAR"))).toBe("2026-01-02");
+    expect(paraISO(ancoraDoCiclo(ancoraPar, "IMPAR"))).toBe("2026-01-03");
+    expect(paraISO(ancoraDoCiclo(ancoraImpar, "IMPAR"))).toBe("2026-01-03");
+    expect(paraISO(ancoraDoCiclo(ancoraImpar, "PAR"))).toBe("2026-01-04");
+  });
+
+  it("cobra os dias ímpares do mês", () => {
+    const noites = noitesDeServicoNoMes(2026, 5, ancoraPar, "IMPAR").map(paraISO);
+    expect(noites).toEqual([
+      "2026-05-01",
+      "2026-05-03",
+      "2026-05-05",
+      "2026-05-07",
+      "2026-05-09",
+      "2026-05-11",
+      "2026-05-13",
+      "2026-05-15",
+      "2026-05-17",
+      "2026-05-19",
+      "2026-05-21",
+      "2026-05-23",
+      "2026-05-25",
+      "2026-05-27",
+      "2026-05-29",
+      "2026-05-31",
+    ]);
+  });
+
+  it("cobra os dias pares do mês", () => {
+    const noites = noitesDeServicoNoMes(2026, 5, ancoraImpar, "PAR").map(paraISO);
+    expect(noites).toHaveLength(15);
+    expect(noites[0]).toBe("2026-05-02");
+    expect(noites.at(-1)).toBe("2026-05-30");
+    expect(noites.every((iso) => Number(iso.slice(8)) % 2 === 0)).toBe(true);
+  });
+
+  it("mantém a mesma âncora com paridades diferentes, invertendo as noites", () => {
+    const impar = noitesDeServicoNoMes(2026, 1, ancoraPar, "IMPAR").map(paraISO);
+    const par = noitesDeServicoNoMes(2026, 1, ancoraPar, "PAR").map(paraISO);
+    expect(impar.every((iso) => Number(iso.slice(8)) % 2 === 1)).toBe(true);
+    expect(par.every((iso) => Number(iso.slice(8)) % 2 === 0)).toBe(true);
+    expect(impar.some((iso) => par.includes(iso))).toBe(false);
+    // Janeiro tem 31 dias: 16 ímpares contra 15 pares.
+    expect(impar).toHaveLength(16);
+    expect(par).toHaveLength(15);
+  });
+
+  it("nunca gera duas noites seguidas, em nenhum dos meses, nas duas paridades", () => {
+    for (const paridade of ["IMPAR", "PAR"] as const) {
+      for (const ancora of [ancoraPar, ancoraImpar]) {
+        const todas = [
+          ...noitesDeServicoNoMes(2026, 1, ancora, paridade),
+          ...noitesDeServicoNoMes(2026, 2, ancora, paridade),
+          ...noitesDeServicoNoMes(2026, 3, ancora, paridade),
+        ].map(paraISO);
+
+        for (let i = 1; i < todas.length; i++) {
+          expect(diffDias(todas[i], todas[i - 1])).toBe(2);
+        }
+      }
+    }
+  });
+
+  it("faz a virada de mês de 31 dias sem noite dupla nem noite perdida", () => {
+    const paridade = "PAR" as const;
+    const janeiro = noitesDeServicoNoMes(2026, 1, ancoraImpar, paridade).map(paraISO);
+    const fevereiro = noitesDeServicoNoMes(2026, 2, ancoraImpar, paridade).map(paraISO);
+
+    // Janeiro de 31 dias: o dia 31 é ímpar, então a última noite é dia 30.
+    expect(janeiro.at(-1)).toBe("2026-01-30");
+    expect(fevereiro[0]).toBe("2026-02-01");
+    expect(diffDias(fevereiro[0], janeiro.at(-1)!)).toBe(2);
   });
 });
 

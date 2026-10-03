@@ -12,6 +12,7 @@ import {
   garantirTimePadrao,
   gerarMesSeguinte,
   listarPessoasAtivas,
+  lerConfiguracoes,
   listarPeriodos,
   listarPostos,
   listarTimes,
@@ -19,6 +20,7 @@ import {
   periodoVigente,
   publicarPeriodo,
   regerarAutomatico,
+  salvarConfiguracoes,
   restaurarAutomatico,
   semearPostos,
   sugestoesParaVaga,
@@ -81,6 +83,34 @@ describe("cadastros", () => {
 
   it("conta o quadro ativo por função", async () => {
     expect(await estatisticasQuadro()).toMatchObject({ CE: 1, LR: 1, MC: 3 });
+  });
+});
+
+describe("configurações", () => {
+  it("começa com a âncora padrão em dias pares", async () => {
+    const config = await lerConfiguracoes();
+
+    expect(config.dataAncora).toBe("2026-01-02");
+    expect(config.noiteDeServico).toBe("PAR");
+  });
+
+  it("guarda a troca de ímpar para par sem perder o resto", async () => {
+    await salvarConfiguracoes({ turnoInicio: "20:00" });
+
+    const config = await salvarConfiguracoes({ noiteDeServico: "PAR" });
+
+    expect(config.noiteDeServico).toBe("PAR");
+    expect(config.turnoInicio).toBe("20:00:00");
+    expect(config.dataAncora).toBe("2026-01-02");
+  });
+
+  it("não perde a paridade quando outro campo é salvo", async () => {
+    await salvarConfiguracoes({ noiteDeServico: "PAR" });
+
+    const config = await salvarConfiguracoes({ turnoFim: "08:00" });
+
+    expect(config.noiteDeServico).toBe("PAR");
+    expect(config.turnoFim).toBe("08:00:00");
   });
 });
 

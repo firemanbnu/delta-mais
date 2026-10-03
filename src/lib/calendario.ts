@@ -1,3 +1,5 @@
+import { type NoiteDeServico } from "./dominio";
+
 export type AnoMes = { ano: number; mes: number };
 
 export const MESES_PT = [
@@ -95,13 +97,35 @@ export function diffDias(a: Date | string, b: Date | string): number {
 }
 
 /**
+ * Ancora efetiva do ciclo de 48h.
+ *
+ * O 12x36 é um ciclo de 48h: uma noite de serviço, uma de folga. A data-âncora
+ * marca o primeiro serviço do ciclo, mas a equipe pode trabalhar nos dias ímpares
+ * ou pares do mês. Quando a paridade pedida não bate com a da âncora, ela anda um
+ * dia: o ciclo continua intacto (nunca duas noites seguidas) e as noites caem
+ * exatamente nos dias pedidos.
+ */
+export function ancoraDoCiclo(
+  ancora: Date | string,
+  noiteDeServico: NoiteDeServico,
+): Date {
+  const base = paraData(ancora);
+  const desejada = noiteDeServico === "IMPAR" ? 1 : 0;
+  return base.getDate() % 2 === desejada ? base : somarDias(base, 1);
+}
+
+/**
  * Plantão 12x36: 12h de serviço (19h -> 7h) e 36h de folga, o que dá um
  * ciclo de 48h. O bombeiro trabalha uma noite, folga a outra e volta.
  *
  * Uma data é de serviço quando a distância em dias até a data-âncora é par.
  */
-export function ehNoiteDeServico(data: Date | string, ancora: Date | string): boolean {
-  const diff = diffDias(data, ancora);
+export function ehNoiteDeServico(
+  data: Date | string,
+  ancora: Date | string,
+  noiteDeServico: NoiteDeServico,
+): boolean {
+  const diff = diffDias(data, ancoraDoCiclo(ancora, noiteDeServico));
   return (((diff % 2) + 2) % 2) === 0;
 }
 
@@ -109,19 +133,21 @@ export function noitesDeServicoNoMes(
   ano: number,
   mes: number,
   ancora: Date | string,
+  noiteDeServico: NoiteDeServico,
 ): Date[] {
-  return diasDoMes(ano, mes).filter((d) => ehNoiteDeServico(d, ancora));
+  return diasDoMes(ano, mes).filter((d) => ehNoiteDeServico(d, ancora, noiteDeServico));
 }
 
 export function proximaNoiteDeServico(
   referencia: Date,
   ancora: Date | string,
+  noiteDeServico: NoiteDeServico,
 ): Date {
   const base = paraData(referencia);
   for (let i = 0; i <= 7; i++) {
     const candidata = new Date(base);
     candidata.setDate(base.getDate() + i);
-    if (ehNoiteDeServico(candidata, ancora)) return candidata;
+    if (ehNoiteDeServico(candidata, ancora, noiteDeServico)) return candidata;
   }
   return base;
 }
