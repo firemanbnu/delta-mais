@@ -87,11 +87,12 @@ describe("cadastros", () => {
 });
 
 describe("configurações", () => {
-  it("começa com a âncora padrão em dias pares", async () => {
+  it("começa com a âncora padrão no início da escala de rádio", async () => {
     const config = await lerConfiguracoes();
 
-    expect(config.dataAncora).toBe("2026-01-02");
+    expect(config.dataAncora).toBe("2026-10-02");
     expect(config.noiteDeServico).toBe("PAR");
+    expect(config.radioAncora).toBe("2026-10-02");
   });
 
   it("guarda a troca de ímpar para par sem perder o resto", async () => {
@@ -101,7 +102,7 @@ describe("configurações", () => {
 
     expect(config.noiteDeServico).toBe("PAR");
     expect(config.turnoInicio).toBe("20:00:00");
-    expect(config.dataAncora).toBe("2026-01-02");
+    expect(config.dataAncora).toBe("2026-10-02");
   });
 
   it("não perde a paridade quando outro campo é salvo", async () => {
@@ -111,6 +112,15 @@ describe("configurações", () => {
 
     expect(config.noiteDeServico).toBe("PAR");
     expect(config.turnoFim).toBe("08:00:00");
+  });
+
+  it("guarda o início da escala de rádio", async () => {
+    await salvarConfiguracoes({ radioAncora: "2026-11-01" });
+
+    const config = await salvarConfiguracoes({ turnoFim: "07:00" });
+
+    expect(config.radioAncora).toBe("2026-11-01");
+    expect(config.turnoFim).toBe("07:00:00");
   });
 });
 

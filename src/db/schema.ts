@@ -12,9 +12,9 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { NOITES_DE_SERVICO } from "../lib/dominio";
+import { FUNCOES, NOITES_DE_SERVICO } from "../lib/dominio";
 
-export const enumFuncao = pgEnum("funcao", ["CE", "LR", "MC", "BA", "RE"]);
+export const enumFuncao = pgEnum("funcao", FUNCOES);
 export const enumUnidade = pgEnum("unidade", ["F2", "F3", "CRS"]);
 export const enumGrupoPosto = pgEnum("grupo_posto", ["MC", "BA_RE", "FIXO"]);
 export const enumStatusPeriodo = pgEnum("status_periodo", ["RASCUNHO", "PUBLICADO"]);
@@ -140,14 +140,60 @@ export const settings = pgTable("settings", {
   id: integer("id").primaryKey(),
   turnoInicio: time("turno_inicio").notNull().default("19:00:00"),
   turnoFim: time("turno_fim").notNull().default("07:00:00"),
-  dataAncora: date("data_ancora").notNull().default("2026-01-02"),
+  dataAncora: date("data_ancora").notNull().default("2026-10-02"),
   noiteDeServico: enumNoiteDeServico("noite_de_servico").notNull().default("PAR"),
+  radioAncora: date("radio_ancora").notNull().default("2026-10-02"),
   equipeId: integer("equipe_id").references(() => teams.id, { onDelete: "set null" }),
   observacoes: text("observacoes"),
   atualizadoEm: timestamp("atualizado_em", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Posição de cada operador de rádio no seu anel.
+ *
+ * O anel é a ordem do rodízio (1 e 2) e `ordem` é a posição dentro dele, de 0
+ * a 3. A escala em si não é guardada: ela é recalculada a partir daqui, e só
+ * as trocas manuais ficam em `radio_excecao`.
+ */
+export const radioAnel = pgTable(
+  "radio_anel",
+  {
+    pessoaId: integer("pessoa_id")
+      .primaryKey()
+      .references(() => people.id, { onDelete: "cascade" }),
+    anel: integer("anel").notNull(),
+    ordem: integer("ordem").notNull(),
+  },
+  (t) => [
+    uniqueIndex("radio_anel_anel_ordem_idx").on(t.anel, t.ordem),
+    index("radio_anel_anel_idx").on(t.anel),
+  ],
+);
+
+/** Troca manual de operador numa faixa de uma noite específica. */
+export const radioExcecao = pgTable(
+  "radio_excecao",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    periodoId: integer("periodo_id")
+      .notNull()
+      .references(() => periods.id, { onDelete: "cascade" }),
+    data: date("data").notNull(),
+    slot: text("slot").notNull(),
+    pessoaId: integer("pessoa_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    atualizadoEm: timestamp("atualizado_em", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("radio_excecao_periodo_data_slot_idx").on(t.periodoId, t.data, t.slot),
+    index("radio_excecao_periodo_idx").on(t.periodoId),
+  ],
+);
 
 export const teamsRelations = relations(teams, ({ many }) => ({
   people: many(people),
@@ -157,6 +203,8 @@ export const peopleRelations = relations(people, ({ one, many }) => ({
   equipe: one(teams, { fields: [people.equipeId], references: [teams.id] }),
   assignments: many(assignments),
   absences: many(absences),
+  radioAnel: one(radioAnel),
+  radioExcecoes: many(radioExcecao),
 }));
 
 export const postsRelations = relations(posts, ({ many }) => ({
@@ -177,6 +225,15 @@ export const absencesRelations = relations(absences, ({ one }) => ({
   pessoa: one(people, { fields: [absences.pessoaId], references: [people.id] }),
 }));
 
+export const radioAnelRelations = relations(radioAnel, ({ one }) => ({
+  pessoa: one(people, { fields: [radioAnel.pessoaId], references: [people.id] }),
+}));
+
+export const radioExcecaoRelations = relations(radioExcecao, ({ one }) => ({
+  periodo: one(periods, { fields: [radioExcecao.periodoId], references: [periods.id] }),
+  pessoa: one(people, { fields: [radioExcecao.pessoaId], references: [people.id] }),
+}));
+
 export type Team = typeof teams.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
@@ -185,5 +242,7 @@ export type Period = typeof periods.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;
 export type Absence = typeof absences.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
+export type RadioAnel = typeof radioAnel.$inferSelect;
+export type RadioExcecao = typeof radioExcecao.$inferSelect;
 
 export const VERSAO_PADRAO = sql`1`;

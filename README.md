@@ -5,7 +5,8 @@ rotação de 12 dias de serviço e 36 de folga sai da âncora configurada em
 Configurações, junto com a escolha de dias pares ou ímpares do mês.
 
 O app monta a escala do mês, deixa o bombeiro ocupar cada vaga, publica o mês
-e exporta para CSV ou para impressão.
+e exporta para CSV ou para impressão. Junto do plantão ele monta a escala de
+rádio da central, com rodízio entre dois anéis.
 
 ## Stack
 
@@ -55,7 +56,7 @@ vercel env pull .env.local --yes
 | `npm run db:generate` | Gera SQL em `drizzle/` a partir de `src/db/schema.ts` |
 | `npm run db:migrate` | Aplica as migrações de `drizzle/` no banco de `DATABASE_URL` |
 | `npm run db:push` | Sincroniza o schema sem histórico (só para PGlite local) |
-| `npm run db:seed` | Semeia a equipe, as 10 vagas e as configurações |
+| `npm run db:seed` | Semeia a equipe, as 10 vagas, os dois anéis de rádio e as configurações |
 
 `drizzle-kit` não lê `.env.local`, então `db:migrate` passa pelo `dotenv-cli`.
 `db:push` e `db:generate` devem ser rodados com a variável no ambiente.
@@ -101,7 +102,37 @@ O app continua lendo `process.env.DATABASE_URL`; não há código de branching.
 entra de plantão. O 12x36 continua um ciclo de 48h, então quando a paridade
 escolhida não bate com a da data-âncora, `ancoraDoCiclo()` anda a âncora um dia
 (`src/lib/calendario.ts`). Assim as noites caem sempre nos dias pedidos sem
-nunca dar duas noites seguidas, nem na virada de meses de 31 dias.
+nunca dar duas noites seguidas.
+
+A paridade é do ciclo, não do calendário: como o ciclo anda de dois em dois dias,
+quem cai no dia 30 de outubro volta a cair no dia 1 de novembro. Ou seja, com a
+âncora em `2026-10-02` e noites pares, outubro vai de 2 a 30, novembro de 1 a 29
+e dezembro de 1 a 31. Para voltar aos dias pares em janeiro é preciso mudar a
+âncora em Configurações.
+
+### Escala de rádio
+
+A escala de rádio acompanha o mês do plantão, com uma diferença: ela só mostra as
+noites em que há equipe, nunca as noites inversas.
+
+- Dois anéis de 4 operadores. A cada noite os anéis trocam de turno e a cada duas
+  noites avançam uma posição; o ciclo fecha em 8 noites (16 dias).
+- As faixas de 19:00 às 20:00 e de 06:00 às 07:00 são fixas: quem atende a central
+  é o bombeiro escalado no `F3-BA2` do mês.
+- `settings.radio_ancora` marca a noite zero do rádio. Ela precisa cair numa noite
+  de serviço do plantão, senão o índice da noite sai quebrado e o rodízio gira
+  meio passo; o formulário de Configurações avisa e mostra as primeiras noites
+  antes de salvar.
+- Só as trocas manuais são gravadas, em `radio_excecao`. O rodízio é recalculado a
+  cada leitura, então mudar a âncora ou a equipe não apaga o que foi trocado.
+- Numa noite cheia as oito faixas já têm alguém. Escolher outro operador no seletor
+  troca as posições dos dois, e devolver a faixa ao rodízio desfaz a troca pareada.
+- A impressão sai em folha separada (a grade é larga) e o CSV do rádio fica em
+  `/escala/[ano]/[mes]/exportar/radio`, para não mudar o formato do CSV de
+  plantão.
+
+A edição da composição dos anéis pela interface ficou fora da primeira versão: os
+anéis são semeados por `db:seed`.
 
 ### Observações de produção
 

@@ -150,4 +150,10 @@
     box-shadow: none !important;
     border-color: #999 !important;
   }
+
+  /* A grade de rádio é larga e não cabe junto do plantão: vira outra folha. */
+  .quebra-folha {
+    break-before: page;
+    page-break-before: always;
+  }
 }

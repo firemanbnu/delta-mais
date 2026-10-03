@@ -15,6 +15,13 @@
       "when": 1791021577893,
       "tag": "0001_married_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791045695794,
+      "tag": "0002_escala_radio",
+      "breakpoints": true
     }
   ]
 }

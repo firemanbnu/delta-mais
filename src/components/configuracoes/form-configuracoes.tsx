@@ -27,12 +27,20 @@ import {
   ROTULO_NOITE_DE_SERVICO,
   type NoiteDeServico,
 } from "@/lib/dominio";
+import {
+  ancoraRadioAlinhada,
+  indiceNoite,
+  noiteZeroDoRadio,
+  validarConfigRadio,
+  type ConfigRadio,
+} from "@/lib/radio";
 
 type Config = {
   turnoInicio: string;
   turnoFim: string;
   dataAncora: string;
   noiteDeServico: NoiteDeServico;
+  radioAncora: string;
   observacoes: string | null;
 };
 
@@ -46,6 +54,7 @@ export function FormConfiguracoes({
   const [estado, submeter, pendente] = useActionState(salvarConfiguracoesAction, null);
   const [noiteDeServico, setNoiteDeServico] = useState<NoiteDeServico>(config.noiteDeServico);
   const [dataAncora, setDataAncora] = useState(ancoraISO);
+  const [radioAncora, setRadioAncora] = useState(config.radioAncora);
 
   const referencia = dataAncora || ancoraISO;
   const inicioDoCiclo = useMemo(
@@ -63,6 +72,24 @@ export function FormConfiguracoes({
     return saida;
   }, [referencia, noiteDeServico]);
   const cicloDeslocado = paraISO(inicioDoCiclo) !== referencia;
+
+  const configRadio: ConfigRadio = useMemo(
+    () => ({ dataAncora: referencia, noiteDeServico, radioAncora }),
+    [referencia, noiteDeServico, radioAncora],
+  );
+  const alinhada = ancoraRadioAlinhada(configRadio);
+  const primeiraNoite = useMemo(() => noiteZeroDoRadio(configRadio), [configRadio]);
+  const primeirasNoites = useMemo(() => {
+    if (!alinhada) return [];
+    const saida: { data: Date; indice: number }[] = [];
+    let cursor = primeiraNoite;
+    for (let i = 0; i < 4; i++) {
+      saida.push({ data: cursor, indice: indiceNoite(cursor, configRadio) });
+      cursor = somarDias(cursor, 2);
+    }
+    return saida;
+  }, [primeiraNoite, configRadio, alinhada]);
+  const problemasRadio = useMemo(() => validarConfigRadio(configRadio), [configRadio]);
 
   return (
     <Card className="impressao">
@@ -149,6 +176,45 @@ export function FormConfiguracoes({
                 : `O ciclo começa em ${formatarDataBR(inicioDoCiclo)}.`}{" "}
               Salve para aplicar na escala.
             </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="radioAncora">Início da escala de rádio</Label>
+            <Input
+              id="radioAncora"
+              name="radioAncora"
+              type="date"
+              value={radioAncora}
+              onChange={(evento) => setRadioAncora(evento.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Primeira noite da escala de rádio. A grade mostra só as noites de serviço do plantão a
+              partir desta data, então ela precisa cair numa noite de serviço.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-3 sm:col-span-2">
+            <p className="text-sm font-medium">Primeiras noites de rádio</p>
+            {alinhada ? (
+              <>
+                <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {primeirasNoites.map(({ data, indice }) => (
+                    <li key={paraISO(data)}>
+                      {formatarDataBR(data)} <span className="text-xs">noite {indice}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  A primeira noite do ciclo é {formatarDataBR(primeiraNoite)}.
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-destructive">
+                {problemasRadio[0]?.mensagem ??
+                  "Esta data não é noite de serviço do plantão."}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">

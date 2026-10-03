@@ -7,6 +7,8 @@ import {
   buscarPeriodo,
   lerConfiguracoes,
   montarEscala,
+  montarEscalaRadio,
+  semearOperadoresRadio,
   semearPostos,
 } from "@/db/repositorio";
 import { ROTULO_UNIDADE, type Unidade } from "@/lib/dominio";
@@ -15,9 +17,11 @@ import {
   DIAS_SEMANA_CURTO,
   diasDoMes,
   ehNoiteDeServico,
+  formatarDataBR,
   paraISO,
   rotuloMesCurto,
 } from "@/lib/calendario";
+import { SLOTS_RADIO, resumoDaRegra } from "@/lib/radio";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +38,7 @@ export default async function PaginaImprimir({
     notFound();
   }
 
-  await semearPostos();
+  await Promise.all([semearPostos(), semearOperadoresRadio()]);
   const periodo = await buscarPeriodo({ ano: anoNum, mes: mesNum });
   if (!periodo) notFound();
 
@@ -43,6 +47,8 @@ export default async function PaginaImprimir({
     lerConfiguracoes(),
   ]);
   if (!escala) notFound();
+
+  const radio = await montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala);
 
   const nomesPorId = new Map(escala.pessoas.map((p) => [p.id, p]));
   const unidades: Unidade[] = ["F2", "F3", "CRS"];
@@ -61,6 +67,12 @@ export default async function PaginaImprimir({
           Voltar para a escala
         </BotaoLink>
         <div className="flex items-center gap-2">
+          {radio && radio.noites.length > 0 ? (
+            <BotaoLink variant="outline" size="sm" href={`${caminho}/exportar/radio`}>
+              <Download data-icon="inline-start" />
+              CSV do rádio
+            </BotaoLink>
+          ) : null}
           <BotaoLink variant="outline" size="sm" href={`${caminho}/exportar`}>
             <Download data-icon="inline-start" />
             Baixar CSV
@@ -183,6 +195,83 @@ key={paraISO(dia)}
           </div>
         </section>
       </article>
+
+      {radio && radio.noites.length > 0 ? (
+        <article className="impressao quebra-folha mx-auto mt-6 max-w-6xl rounded-xl border bg-white p-8 text-black">
+          <header className="border-b-2 border-black pb-3">
+            <h1 className="text-xl font-bold uppercase tracking-wide">Escala de Rádio</h1>
+            <p className="mt-1 text-sm">
+              {rotuloMesCurto(anoNum, mesNum)} · {radio.noites.length} noites de rádio ·{" "}
+              {radio.config.radioAncora ? formatarDataBR(radio.config.radioAncora) : ""} até o fim
+              da escala
+            </p>
+          </header>
+
+          <p className="mt-2 text-xs">{resumoDaRegra()}</p>
+
+          <table className="mt-3 w-full border-collapse text-[9px]">
+            <thead>
+              <tr>
+                <th className="w-16 border border-black px-1 py-0.5 text-left font-bold">Noite</th>
+                {SLOTS_RADIO.map((slot) => (
+                  <th key={slot.id} className="border border-black px-0.5 py-0.5 font-normal">
+                    {slot.inicio}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {radio.noites.map((noite) => (
+                <tr key={noite.data}>
+                  <td className="border border-black px-1 py-0.5 font-mono">
+                    {formatarDataBR(noite.data)}
+                    <span className="block text-[8px]">nº {noite.indice}</span>
+                  </td>
+                  {SLOTS_RADIO.map((slot) => {
+                    if (slot.bloco === "FIXO") {
+                      return (
+                        <td
+                          key={slot.id}
+                          className="border border-black bg-neutral-100 px-0.5 py-0.5 text-center font-semibold"
+                        >
+                          {radio.comunicacao?.nome ?? "—"}
+                        </td>
+                      );
+                    }
+                    const celula = noite.slots[slot.id];
+                    return (
+                      <td
+                        key={slot.id}
+                        className={`border border-black px-0.5 py-0.5 ${
+                          celula?.origem === "MANUAL" ? "bg-neutral-200 font-semibold" : ""
+                        }`}
+                      >
+                        {celula ? (radio.nomesPorId[celula.pessoaId] ?? "—") : "—"}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p className="mt-2 text-xs">
+            Célula cinza: troca manual. A entrada e a saída da central (19:00 e 06:00) ficam com o
+            bombeiro escalado no F3-BA2.
+          </p>
+
+          <section className="mt-8 grid grid-cols-2 gap-8 text-xs">
+            <div>
+              <p className="mb-6">Responsável pela escala de rádio</p>
+              <div className="border-t border-black pt-1">Nome e assinatura</div>
+            </div>
+            <div>
+              <p className="mb-6">Coordenador da comunicação</p>
+              <div className="border-t border-black pt-1">Nome e assinatura</div>
+            </div>
+          </section>
+        </article>
+      ) : null}
     </div>
   );
 }

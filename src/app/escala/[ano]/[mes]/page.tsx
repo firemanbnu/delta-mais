@@ -12,6 +12,8 @@ import {
 
 import { BarraAcoes } from "@/components/escala/barra-acoes";
 import { CelulaVaga } from "@/components/escala/celula-vaga";
+import { BotaoRestaurarRadio } from "@/components/radio/botao-restaurar-radio";
+import { GradeRadio } from "@/components/radio/grade-radio";
 import { Badge } from "@/components/ui/badge";
 import { BotaoLink } from "@/components/ui/link-button";
 import {
@@ -28,18 +30,22 @@ import {
   lerConfiguracoes,
   listarPeriodos,
   montarEscala,
+  montarEscalaRadio,
+  semearOperadoresRadio,
   semearPostos,
 } from "@/db/repositorio";
 import { ROTULO_UNIDADE, type Unidade } from "@/lib/dominio";
 import {
   DIAS_SEMANA_CURTO,
   ehNoiteDeServico,
+  formatarDataBR,
   mesAnterior,
   mesSeguinte,
   noitesDeServicoNoMes,
   paraISO,
   rotuloMesCurto,
 } from "@/lib/calendario";
+import { resumoDaRegra } from "@/lib/radio";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Escala do mês" };
@@ -53,7 +59,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
     notFound();
   }
 
-  await semearPostos();
+  await Promise.all([semearPostos(), semearOperadoresRadio()]);
 
   const [periodo, config, todosPeriodos] = await Promise.all([
     buscarPeriodo({ ano: anoNum, mes: mesNum }),
@@ -68,10 +74,21 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
   const escala = await montarEscala({ ano: anoNum, mes: mesNum });
   if (!escala) notFound();
 
+  const radio = await montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala);
+
   const anterior = await PeriodoAnterior({ ano: anoNum, mes: mesNum });
   const noites = noitesDeServicoNoMes(anoNum, mesNum, config.dataAncora, config.noiteDeServico);
   const erros = escala.problemas.filter((p) => p.severidade === "erro");
   const avisos = escala.problemas.filter((p) => p.severidade === "aviso");
+
+  const errosRadio = (radio?.problemas ?? []).filter((p) => p.severidade === "erro");
+  const avisosRadio = (radio?.problemas ?? []).filter((p) => p.severidade === "aviso");
+  const trocasManuais =
+    radio?.noites.reduce(
+      (total, noite) =>
+        total + Object.values(noite.slots).filter((celula) => celula.origem === "MANUAL").length,
+      0,
+    ) ?? 0;
 
   const nomesPorId = new Map(escala.pessoas.map((p) => [p.id, p]));
   const idsOcupadosPorPosto = new Map(
@@ -283,6 +300,60 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           })}
         </ol>
       </section>
+
+      {radio && radio.noites.length > 0 ? (
+        <section className="mt-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Escala de rádio</h2>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{resumoDaRegra()}</p>
+            </div>
+
+            <div className="sem-impressao flex flex-wrap items-center gap-2">
+              {trocasManuais > 0 ? <BotaoRestaurarRadio ano={anoNum} mes={mesNum} /> : null}
+              <BotaoLink variant="outline" size="sm" href={`${caminho(anoNum, mesNum)}/exportar/radio`}>
+                <Download data-icon="inline-start" />
+                CSV do rádio
+              </BotaoLink>
+            </div>
+          </div>
+
+          {errosRadio.length > 0 || avisosRadio.length > 0 ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {errosRadio.length > 0 ? (
+                <Avisos titulo="Erros na escala de rádio" itens={errosRadio} variante="erro" />
+              ) : null}
+              {avisosRadio.length > 0 ? (
+                <Avisos titulo="Atenção" itens={avisosRadio} variante="aviso" />
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="mt-4">
+            <GradeRadio
+              ano={anoNum}
+              mes={mesNum}
+              noites={radio.noites}
+              operadores={radio.operadores.map((operador) => ({
+                id: operador.id,
+                nome: operador.nome,
+                anel: operador.anel,
+              }))}
+              ausentes={radio.ausentes}
+              comunicacao={radio.comunicacao}
+            />
+          </div>
+        </section>
+      ) : (
+        <section className="mt-8">
+          <h2 className="font-semibold">Escala de rádio</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Este mês ainda não entrou na escala de rádio. Ela começa em{" "}
+            {formatarDataBR(radio?.config.radioAncora ?? config.radioAncora)} e mostra apenas as
+            noites de serviço do plantão.
+          </p>
+        </section>
+      )}
     </div>
   );
 }

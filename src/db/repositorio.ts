@@ -1,8 +1,8 @@
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { getDb } from "./index";
-import { POSTOS_PADRAO, type NoiteDeServico } from "@/lib/dominio";
-import { chaveAnoMes, paraISO, type AnoMes } from "@/lib/calendario";
+import { POSTOS_PADRAO, type Funcao, type NoiteDeServico } from "@/lib/dominio";
+import { chaveAnoMes, formatarDataBR, paraISO, rotuloMes, type AnoMes } from "@/lib/calendario";
 import {
   avancarRodizio,
   sugerirParaPosto,
@@ -13,11 +13,29 @@ import {
   type Problema,
 } from "@/lib/rotacao";
 import {
+  OPERADORES_POR_ANEL,
+  OPERADORES_RADIO_PADRAO,
+  POSTO_COMUNICACAO,
+  SLOTS_RODIZIO,
+  TIME_RADIO,
+  montarGradeDoMes,
+  noitesDeRadioNoMes,
+  validarAneis,
+  validarConfigRadio,
+  validarGradeRadio,
+  type AneisRadio,
+  type ConfigRadio,
+  type NoiteDeRadio,
+  type OperadorRadio,
+} from "@/lib/radio";
+import {
   absences,
   assignments,
   people,
   periods,
   posts,
+  radioAnel,
+  radioExcecao,
   settings,
   teams,
 } from "./schema";
@@ -25,7 +43,7 @@ import {
 export type PessoaComEquipe = {
   id: number;
   nome: string;
-  funcao: "CE" | "LR" | "MC" | "BA" | "RE";
+  funcao: Funcao;
   matricula: string | null;
   telefone: string | null;
   postoFixo: string | null;
@@ -56,7 +74,7 @@ export type EscalaDoMes = {
   regravadas?: number;
 };
 
-function paraResumo(p: { id: number; nome: string; funcao: "CE" | "LR" | "MC" | "BA" | "RE" }) {
+function paraResumo(p: { id: number; nome: string; funcao: Funcao }) {
   return { id: String(p.id), nome: p.nome, funcao: p.funcao };
 }
 
@@ -162,6 +180,7 @@ export async function salvarConfiguracoes(
     turnoFim: string;
     dataAncora: string;
     noiteDeServico: NoiteDeServico;
+    radioAncora: string;
     equipeId: number | null;
     observacoes: string | null;
   }>,
@@ -175,6 +194,7 @@ export async function salvarConfiguracoes(
       turnoFim: dados.turnoFim ?? atual.turnoFim,
       dataAncora: dados.dataAncora ?? atual.dataAncora,
       noiteDeServico: dados.noiteDeServico ?? atual.noiteDeServico,
+      radioAncora: dados.radioAncora ?? atual.radioAncora,
       equipeId: dados.equipeId === undefined ? atual.equipeId : dados.equipeId,
       observacoes: dados.observacoes === undefined ? atual.observacoes : dados.observacoes,
       atualizadoEm: new Date(),
@@ -583,3 +603,328 @@ export async function estatisticasQuadro() {
 }
 
 export { chaveAnoMes };
+
+/* ------------------------------------------------------------------ rádio */
+
+export type EscalaRadio = {
+  config: ConfigRadio;
+  /** Noites do mês que já entraram na escala de rádio. */
+  noites: NoiteDeRadio[];
+  operadores: OperadorRadio[];
+  aneis: AneisRadio;
+  nomesPorId: Record<string, string>;
+  ausentes: string[];
+  problemas: Problema[];
+  /** Id e nome do bombeiro do F3-BA2 do mês, das faixas fixas. */
+  comunicacao: { pessoaId: string; nome: string } | null;
+};
+
+/** Cria a equipe de rádio e as posições dos dois anéis, uma vez só. */
+export async function semearOperadoresRadio() {
+  const db = getDb();
+  const [contagem] = await db.select({ total: sql<number>`count(*)::int` }).from(radioAnel);
+  if (Number(contagem?.total ?? 0) >= OPERADORES_POR_ANEL * 2) return;
+
+  const equipe = await garantirTimePadrao(TIME_RADIO);
+  const doTime = await db
+    .select({ id: people.id, nome: people.nome })
+    .from(people)
+    .where(eq(people.equipeId, equipe.id));
+  const idPorNome = new Map(doTime.map((p) => [p.nome.trim().toLowerCase(), p.id]));
+
+  for (const operador of OPERADORES_RADIO_PADRAO) {
+    const chave = operador.nome.trim().toLowerCase();
+    let pessoaId = idPorNome.get(chave);
+
+    if (pessoaId === undefined) {
+      const [criada] = await db
+        .insert(people)
+        .values({
+          equipeId: equipe.id,
+          nome: operador.nome,
+          funcao: "RADIO",
+          ordem: operador.anel * 10 + operador.ordem,
+        })
+        .returning({ id: people.id });
+      pessoaId = criada.id;
+      idPorNome.set(chave, pessoaId);
+    }
+
+    await db
+      .insert(radioAnel)
+      .values({ pessoaId, anel: operador.anel, ordem: operador.ordem })
+      .onConflictDoNothing({ target: radioAnel.pessoaId });
+  }
+}
+
+export async function listarOperadoresRadio(): Promise<OperadorRadio[]> {
+  const db = getDb();
+  const linhas = await db
+    .select({
+      id: people.id,
+      nome: people.nome,
+      anel: radioAnel.anel,
+      ordem: radioAnel.ordem,
+      ativo: people.ativo,
+    })
+    .from(radioAnel)
+    .innerJoin(people, eq(radioAnel.pessoaId, people.id))
+    .orderBy(asc(radioAnel.anel), asc(radioAnel.ordem));
+
+  return linhas.map((linha) => ({
+    id: String(linha.id),
+    nome: linha.nome,
+    anel: linha.anel === 2 ? 2 : 1,
+    ordem: linha.ordem,
+    ativo: linha.ativo,
+  }));
+}
+
+/**
+ * Anéis na ordem do rodízio. Operador inativo sai da roda: a faixa dele fica
+ * vazia e a validação aponta o problema, em vez de escalar alguém fora de serviço.
+ */
+export function aneisDe(operadores: readonly OperadorRadio[]): AneisRadio {
+  const aneis: AneisRadio = { 1: [], 2: [] };
+  for (const operador of operadores) {
+    if (!operador.ativo) continue;
+    aneis[operador.anel].push(operador.id);
+  }
+  return aneis;
+}
+
+async function excecoesDoPeriodo(
+  periodoId: number,
+): Promise<{ data: string; slot: string; pessoaId: string }[]> {
+  const db = getDb();
+  const linhas = await db
+    .select({ data: radioExcecao.data, slot: radioExcecao.slot, pessoaId: radioExcecao.pessoaId })
+    .from(radioExcecao)
+    .where(eq(radioExcecao.periodoId, periodoId));
+
+  return linhas.map((linha) => ({
+    data: String(linha.data).slice(0, 10),
+    slot: linha.slot,
+    pessoaId: String(linha.pessoaId),
+  }));
+}
+
+function configRadioDe(config: {
+  dataAncora: string;
+  noiteDeServico: NoiteDeServico;
+  radioAncora: string;
+}): ConfigRadio {
+  return {
+    dataAncora: String(config.dataAncora).slice(0, 10),
+    noiteDeServico: config.noiteDeServico,
+    radioAncora: String(config.radioAncora).slice(0, 10),
+  };
+}
+
+/**
+ * Escala de rádio do mês: as noites de serviço do plantão a partir da âncora do
+ * rádio, já com o rodízio aplicado e as trocas manuais por cima.
+ */
+export async function montarEscalaRadio(
+  anoMes: AnoMes,
+  planta: EscalaDoMes | null = null,
+): Promise<EscalaRadio | null> {
+  const config = await lerConfiguracoes();
+  const periodo = await buscarPeriodo(anoMes);
+  if (!periodo) return null;
+
+  const [operadores, ausentes, plantaDoMes, excecoes] = await Promise.all([
+    listarOperadoresRadio(),
+    ausentesNoMes(anoMes),
+    planta ? Promise.resolve(planta) : montarEscala(anoMes),
+    excecoesDoPeriodo(periodo.id),
+  ]);
+
+  const configRadio = configRadioDe(config);
+  const aneis = aneisDe(operadores);
+  const noites = montarGradeDoMes(anoMes, configRadio, aneis, excecoes);
+  const nomesPorId = Object.fromEntries(operadores.map((o) => [o.id, o.nome]));
+
+  const pessoaDaComunicacao = plantaDoMes?.estado[POSTO_COMUNICACAO] ?? null;
+  const nomesDoPlantao = new Map((plantaDoMes?.pessoas ?? []).map((p) => [p.id, p.nome]));
+
+  const problemas = [
+    ...validarConfigRadio(configRadio),
+    ...validarAneis(aneis, operadores),
+    ...validarGradeRadio(noites, new Map(Object.entries(nomesPorId)), ausentes),
+  ];
+
+  return {
+    config: configRadio,
+    noites,
+    operadores,
+    aneis,
+    nomesPorId,
+    ausentes,
+    problemas,
+    comunicacao: pessoaDaComunicacao
+      ? {
+          pessoaId: pessoaDaComunicacao,
+          nome: nomesDoPlantao.get(pessoaDaComunicacao) ?? nomesPorId[pessoaDaComunicacao] ?? "—",
+        }
+      : null,
+  };
+}
+
+/**
+ * Grava a troca de operador numa faixa de uma noite de rádio.
+ *
+ * Numa noite cheia os oito operadores já ocupam as oito faixas, então escolher
+ * outra pessoa é uma troca de posições: quem sai da faixa pedida assume a faixa
+ * de onde a pessoa escolhida veio, e a noite continua sem repetição nem buraco.
+ * `pessoaId: null` devolve a faixa ao rodízio e desfaz a troca pareada.
+ */
+export async function definirOperadorRadioNoite(
+  anoMes: AnoMes,
+  data: string,
+  slot: string,
+  pessoaId: number | null,
+) {
+  const db = getDb();
+  const periodo = await garantirPeriodo(anoMes);
+  const config = configRadioDe(await lerConfiguracoes());
+
+  const noite = noitesDeRadioNoMes(anoMes.ano, anoMes.mes, config).find(
+    (dia) => paraISO(dia) === data,
+  );
+  if (!noite) {
+    throw new Error(
+      `${formatarDataBR(data)} não é noite de rádio em ${rotuloMes(anoMes.ano, anoMes.mes)}.`,
+    );
+  }
+
+  const faixa = SLOTS_RODIZIO.find((item) => item.id === slot);
+  if (!faixa) throw new Error(`A faixa ${slot} não gira entre os anéis.`);
+
+  const alvo = and(
+    eq(radioExcecao.periodoId, periodo.id),
+    eq(radioExcecao.data, data),
+    eq(radioExcecao.slot, slot),
+  );
+
+  if (pessoaId === null) {
+    await db.delete(radioExcecao).where(alvo);
+    await limparTrocasDuplicadas(periodo.id, anoMes, data);
+    return;
+  }
+
+  const [operador] = await db
+    .select({ nome: people.nome, anel: radioAnel.anel })
+    .from(radioAnel)
+    .innerJoin(people, eq(radioAnel.pessoaId, people.id))
+    .where(eq(radioAnel.pessoaId, pessoaId))
+    .limit(1);
+  if (!operador) throw new Error("Esta pessoa não está em nenhum anel de rádio.");
+
+  const operadores = await listarOperadoresRadio();
+  const grade = montarGradeDoMes(
+    anoMes,
+    config,
+    aneisDe(operadores),
+    await excecoesDoPeriodo(periodo.id),
+  );
+  const celulas = grade.find((item) => item.data === data)?.slots ?? {};
+
+  const escolhido = String(pessoaId);
+  const occupant = celulas[slot];
+
+  // Escolher quem já está na faixa é o mesmo que devolver ao rodízio.
+  if (occupant?.pessoaId === escolhido) {
+    await db.delete(radioExcecao).where(alvo);
+    await limparTrocasDuplicadas(periodo.id, anoMes, data);
+    return;
+  }
+
+  const de = Object.entries(celulas).find(
+    ([slotId, celula]) => slotId !== slot && celula.pessoaId === escolhido,
+  );
+
+  await gravarExcecao(periodo.id, data, slot, pessoaId);
+
+  if (de) {
+    const [slotDe] = de;
+    if (occupant) await gravarExcecao(periodo.id, data, slotDe, Number(occupant.pessoaId));
+    else {
+      await db
+        .delete(radioExcecao)
+        .where(
+          and(
+            eq(radioExcecao.periodoId, periodo.id),
+            eq(radioExcecao.data, data),
+            eq(radioExcecao.slot, slotDe),
+          ),
+        );
+    }
+  }
+
+  await limparTrocasDuplicadas(periodo.id, anoMes, data);
+}
+
+async function gravarExcecao(
+  periodoId: number,
+  data: string,
+  slot: string,
+  pessoaId: number,
+) {
+  const db = getDb();
+  await db
+    .insert(radioExcecao)
+    .values({ periodoId, data, slot, pessoaId })
+    .onConflictDoUpdate({
+      target: [radioExcecao.periodoId, radioExcecao.data, radioExcecao.slot],
+      set: { pessoaId, atualizadoEm: new Date() },
+    });
+}
+
+/**
+ * Rede de segurança das trocas: se alguma ficou com a mesma pessoa em duas
+ * faixas da noite, volta ao rodízio. Acontece ao desfazer só uma das duas
+ * faixas de uma troca.
+ */
+async function limparTrocasDuplicadas(periodoId: number, anoMes: AnoMes, data: string) {
+  const db = getDb();
+  const config = configRadioDe(await lerConfiguracoes());
+  const grade = montarGradeDoMes(
+    anoMes,
+    config,
+    aneisDe(await listarOperadoresRadio()),
+    await excecoesDoPeriodo(periodoId),
+  );
+  const noite = grade.find((item) => item.data === data);
+  if (!noite) return;
+
+  const porPessoa = new Map<string, string[]>();
+  for (const [slotId, celula] of Object.entries(noite.slots)) {
+    const lista = porPessoa.get(celula.pessoaId) ?? [];
+    lista.push(slotId);
+    porPessoa.set(celula.pessoaId, lista);
+  }
+
+  for (const slots of porPessoa.values()) {
+    if (slots.length < 2) continue;
+    for (const slotId of slots) {
+      await db
+        .delete(radioExcecao)
+        .where(
+          and(
+            eq(radioExcecao.periodoId, periodoId),
+            eq(radioExcecao.data, data),
+            eq(radioExcecao.slot, slotId),
+          ),
+        );
+    }
+  }
+}
+
+/** Apaga todas as trocas manuais do mês e devolve o mês ao rodízio. */
+export async function restaurarRadioAutomatico(anoMes: AnoMes) {
+  const db = getDb();
+  const periodo = await buscarPeriodo(anoMes);
+  if (!periodo) throw new Error("Mês não encontrado.");
+  await db.delete(radioExcecao).where(eq(radioExcecao.periodoId, periodo.id));
+}

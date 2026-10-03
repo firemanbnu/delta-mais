@@ -18,6 +18,7 @@ export default async function PaginaConfiguracoes() {
   const ano = hoje.getFullYear();
   const mes = hoje.getMonth() + 1;
   const ancora = String(config.dataAncora).slice(0, 10);
+  const radioAncora = String(config.radioAncora).slice(0, 10);
   const hojeISO = paraISO(hoje);
   const dias = diasDoMes(ano, mes);
   const proximos = dias
@@ -38,6 +39,7 @@ export default async function PaginaConfiguracoes() {
             turnoFim: String(config.turnoFim).slice(0, 5),
             dataAncora: ancora,
             noiteDeServico: config.noiteDeServico,
+            radioAncora,
             observacoes: config.observacoes,
           }}
           ancoraISO={ancora}

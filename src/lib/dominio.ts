@@ -1,5 +1,14 @@
-export const FUNCOES = ["CE", "LR", "MC", "BA", "RE"] as const;
+export const FUNCOES = ["CE", "LR", "MC", "BA", "RE", "RADIO"] as const;
 export type Funcao = (typeof FUNCOES)[number];
+
+export const ROTULO_FUNCAO: Record<Funcao, string> = {
+  CE: "Chefe de equipe",
+  LR: "Líder de viatura",
+  MC: "Motorista",
+  BA: "Brigadista",
+  RE: "Resgate",
+  RADIO: "Operador de rádio",
+};
 
 export const GRUPOS_POSTO = ["MC", "BA_RE", "FIXO"] as const;
 export type GrupoPosto = (typeof GRUPOS_POSTO)[number];

@@ -15,7 +15,17 @@ import {
 } from "@/db/repositorio";
 import { people } from "@/db/schema";
 
-const TABELAS = ["assignments", "absences", "periods", "posts", "people", "settings", "teams"];
+const TABELAS = [
+  "assignments",
+  "absences",
+  "periods",
+  "posts",
+  "people",
+  "radio_anel",
+  "radio_excecao",
+  "settings",
+  "teams",
+];
 
 export type BancoDeTeste = {
   db: Database;

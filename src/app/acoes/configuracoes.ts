@@ -17,6 +17,7 @@ const configSchema = z.object({
   noiteDeServico: z.enum(NOITES_DE_SERVICO, {
     error: "Escolha se a equipe trabalha em dias ímpares ou pares.",
   }),
+  radioAncora: z.coerce.date("Informe a data de início da escala de rádio."),
   equipeId: z.coerce.number().int().positive().optional(),
   observacoes: z.string().trim().optional(),
 });
@@ -30,6 +31,7 @@ export async function salvarConfiguracoesAction(
     turnoFim: dados.get("turnoFim"),
     dataAncora: dados.get("dataAncora"),
     noiteDeServico: dados.get("noiteDeServico"),
+    radioAncora: dados.get("radioAncora"),
     equipeId: dados.get("equipeId") || undefined,
     observacoes: dados.get("observacoes") ?? "",
   });
@@ -39,10 +41,11 @@ export async function salvarConfiguracoesAction(
   }
 
   try {
-    const { dataAncora, ...resto } = entrada.data;
+    const { dataAncora, radioAncora, ...resto } = entrada.data;
     await salvarConfiguracoes({
       ...resto,
       dataAncora: dataAncora.toISOString().slice(0, 10),
+      radioAncora: radioAncora.toISOString().slice(0, 10),
     });
     revalidatePath("/", "layout");
     return { ok: true, mensagem: "Configurações salvas." };
