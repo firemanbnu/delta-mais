@@ -13,6 +13,12 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { FUNCOES, NOITES_DE_SERVICO } from "../lib/dominio";
+import {
+  CAMPOS_AUTOMACAO,
+  FONTES_AUTOMACAO,
+  STATUS_TAREFA,
+  TIPOS_TAREFA,
+} from "../lib/automacao";
 
 export const enumFuncao = pgEnum("funcao", FUNCOES);
 export const enumUnidade = pgEnum("unidade", ["F2", "F3", "CRS"]);
@@ -25,6 +31,10 @@ export const enumTipoAusencia = pgEnum("tipo_ausencia", [
   "DISPENSA",
 ]);
 export const enumNoiteDeServico = pgEnum("noite_de_servico", NOITES_DE_SERVICO);
+export const enumTipoTarefaAutomacao = pgEnum("tipo_tarefa_automacao", TIPOS_TAREFA);
+export const enumStatusTarefaAutomacao = pgEnum("status_tarefa_automacao", STATUS_TAREFA);
+export const enumCampoAutomacao = pgEnum("campo_automacao", CAMPOS_AUTOMACAO);
+export const enumFonteAutomacao = pgEnum("fonte_automacao", FONTES_AUTOMACAO);
 
 export const teams = pgTable("teams", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -195,6 +205,63 @@ export const radioExcecao = pgTable(
   ],
 );
 
+/**
+ * Fila de comandos entre a página `/assinaturas` e o agente local.
+ *
+ * A página só grava a linha (PENDENTE); quem retoma é o agente, que faz o
+ * UPDATE ... RETURNING num statement único — compatível com o driver HTTP do
+ * Neon, que não tem transação. O resultado do trabalho volta em `resultado`.
+ */
+export const automacaoComando = pgTable(
+  "automacao_comando",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    tipo: enumTipoTarefaAutomacao("tipo").notNull(),
+    status: enumStatusTarefaAutomacao("status").notNull().default("PENDENTE"),
+    payload: text("payload"),
+    resultado: text("resultado"),
+    erro: text("erro"),
+    criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+    atualizadoEm: timestamp("atualizado_em", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("automacao_comando_status_idx").on(t.status),
+    index("automacao_comando_criado_idx").on(t.criadoEm),
+  ],
+);
+
+/**
+ * Uma linha da tabela de revisão da UI: onde cai assinatura/data de cada nome.
+ *
+ * `xPct`/`yPct` são percentuais da página do documento (0–100), o mesmo
+ * sistema de coordenadas que o Autentique usa internamente.
+ */
+export const automacaoPosicao = pgTable(
+  "automacao_posicao",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    nome: text("nome").notNull(),
+    campo: enumCampoAutomacao("campo").notNull(),
+    pagina: integer("pagina").notNull().default(1),
+    xPct: text("x_pct").notNull(),
+    yPct: text("y_pct").notNull(),
+    fonte: enumFonteAutomacao("fonte").notNull().default("MANUAL"),
+    confianca: text("confianca"),
+    ordem: integer("ordem").notNull().default(0),
+  },
+  (t) => [index("automacao_posicao_ordem_idx").on(t.ordem)],
+);
+
+/** Heartbeat do agente local: a UI lê isto para mostrar online/offline. */
+export const automacaoAgente = pgTable("automacao_agente", {
+  id: integer("id").primaryKey(),
+  urlAtual: text("url_atual"),
+  navegadorAberto: boolean("navegador_aberto").notNull().default(false),
+  batidoEm: timestamp("batido_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   people: many(people),
 }));
@@ -244,5 +311,9 @@ export type Absence = typeof absences.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
 export type RadioAnel = typeof radioAnel.$inferSelect;
 export type RadioExcecao = typeof radioExcecao.$inferSelect;
+export type AutomacaoComando = typeof automacaoComando.$inferSelect;
+export type NewAutomacaoComando = typeof automacaoComando.$inferInsert;
+export type AutomacaoPosicao = typeof automacaoPosicao.$inferSelect;
+export type AutomacaoAgente = typeof automacaoAgente.$inferSelect;
 
 export const VERSAO_PADRAO = sql`1`;

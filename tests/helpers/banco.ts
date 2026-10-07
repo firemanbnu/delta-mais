@@ -18,6 +18,9 @@ import { people } from "@/db/schema";
 const TABELAS = [
   "assignments",
   "absences",
+  "automacao_agente",
+  "automacao_comando",
+  "automacao_posicao",
   "periods",
   "posts",
   "people",

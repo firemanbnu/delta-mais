@@ -1,7 +1,8 @@
-import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import { getDb } from "./index";
 import { POSTOS_PADRAO, type Funcao, type NoiteDeServico } from "@/lib/dominio";
+import type { TipoTarefa } from "@/lib/automacao";
 import { chaveAnoMes, formatarDataBR, paraISO, rotuloMes, type AnoMes } from "@/lib/calendario";
 import {
   avancarRodizio,
@@ -31,6 +32,9 @@ import {
 import {
   absences,
   assignments,
+  automacaoAgente,
+  automacaoComando,
+  automacaoPosicao,
   people,
   periods,
   posts,
@@ -38,6 +42,9 @@ import {
   radioExcecao,
   settings,
   teams,
+  type AutomacaoAgente,
+  type AutomacaoComando,
+  type AutomacaoPosicao,
 } from "./schema";
 
 export type PessoaComEquipe = {
@@ -927,4 +934,108 @@ export async function restaurarRadioAutomatico(anoMes: AnoMes) {
   const periodo = await buscarPeriodo(anoMes);
   if (!periodo) throw new Error("Mês não encontrado.");
   await db.delete(radioExcecao).where(eq(radioExcecao.periodoId, periodo.id));
+}
+
+/* -------------------------------------------------------------------------
+ * Automação (fila de comandos para o agente local)
+ * ---------------------------------------------------------------------- */
+
+/** Enfileira um comando para o agente local executar. */
+export async function criarComando(
+  tipo: TipoTarefa,
+  payload?: unknown,
+): Promise<AutomacaoComando> {
+  const db = getDb();
+  const [comando] = await db
+    .insert(automacaoComando)
+    .values({ tipo, payload: payload ? JSON.stringify(payload) : null })
+    .returning();
+  return comando;
+}
+
+/**
+ * Retoma o comando pendente mais antigo e o marca como EXECUTANDO num único
+ * statement (`UPDATE ... WHERE id IN (SELECT ...) RETURNING`), que é atômico
+ * até no driver HTTP do Neon, sem transação.
+ */
+export async function retirarProximoComando(): Promise<AutomacaoComando | null> {
+  const db = getDb();
+  const pendente = db
+    .select({ id: automacaoComando.id })
+    .from(automacaoComando)
+    .where(eq(automacaoComando.status, "PENDENTE"))
+    .orderBy(automacaoComando.criadoEm)
+    .limit(1);
+
+  const [comando] = await db
+    .update(automacaoComando)
+    .set({ status: "EXECUTANDO", atualizadoEm: new Date() })
+    .where(inArray(automacaoComando.id, pendente))
+    .returning();
+  return comando ?? null;
+}
+
+export async function concluirComando(id: number, resultado?: unknown) {
+  const db = getDb();
+  await db
+    .update(automacaoComando)
+    .set({
+      status: "CONCLUIDO",
+      resultado: resultado === undefined ? null : JSON.stringify(resultado),
+      erro: null,
+      atualizadoEm: new Date(),
+    })
+    .where(eq(automacaoComando.id, id));
+}
+
+export async function falharComando(id: number, erro: string) {
+  const db = getDb();
+  await db
+    .update(automacaoComando)
+    .set({ status: "FALHOU", erro, atualizadoEm: new Date() })
+    .where(eq(automacaoComando.id, id));
+}
+
+export async function listarComandosRecentes(limite = 10): Promise<AutomacaoComando[]> {
+  const db = getDb();
+  return db
+    .select()
+    .from(automacaoComando)
+    .orderBy(desc(automacaoComando.criadoEm))
+    .limit(limite);
+}
+
+/* ---------------------------------------------------------------------- */
+
+/** Tabela de revisão: substitui as linhas pelas detectadas/editadas. */
+export async function substituirPosicoes(
+  posicoes: Omit<AutomacaoPosicao, "id">[],
+): Promise<void> {
+  const db = getDb();
+  await db.delete(automacaoPosicao);
+  if (posicoes.length === 0) return;
+  await db.insert(automacaoPosicao).values(posicoes);
+}
+
+export async function listarPosicoes(): Promise<AutomacaoPosicao[]> {
+  const db = getDb();
+  return db.select().from(automacaoPosicao).orderBy(automacaoPosicao.ordem);
+}
+
+/** Sobe o heartbeat do agente local (upsert no registro único). */
+export async function sinalizarAgente(urlAtual: string | null, navegadorAberto: boolean) {
+  const db = getDb();
+  await db
+    .insert(automacaoAgente)
+    .values({ id: 1, urlAtual, navegadorAberto, batidoEm: new Date() })
+    .onConflictDoUpdate({
+      target: automacaoAgente.id,
+      set: { urlAtual, navegadorAberto, batidoEm: new Date() },
+    });
+}
+
+export async function lerAgente(): Promise<AutomacaoAgente | null> {
+  const db = getDb();
+  const [agente] = await db.select().from(automacaoAgente).where(eq(automacaoAgente.id, 1));
+  return agente ?? null;
 }

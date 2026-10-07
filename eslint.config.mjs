@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agente local: pacote independente com typecheck próprio (`npm --prefix automacao run typecheck`).
+    "automacao/**",
   ]),
 ]);
 
