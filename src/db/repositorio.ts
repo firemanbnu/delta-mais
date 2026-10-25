@@ -14,6 +14,13 @@ import {
   type Problema,
 } from "@/lib/rotacao";
 import {
+  aplicarCoberturasNoRadio,
+  coberturasDaViatura,
+  coberturasDoRadio,
+  type CoberturaFerias,
+  type OcupacaoCoberta,
+} from "@/lib/cobertura";
+import {
   OPERADORES_POR_ANEL,
   OPERADORES_RADIO_PADRAO,
   POSTO_COMUNICACAO,
@@ -76,6 +83,13 @@ export type EscalaDoMes = {
   origens: Record<string, "AUTO" | "MANUAL">;
   pessoas: PessoaResumo[];
   ausentes: string[];
+  /**
+   * Quem trabalha de fato nas vagas cobertas por férias neste mês. A vaga em
+   * `estado` continua com o titular; isto é só a camada de cima.
+   */
+  coberturas: Record<string, OcupacaoCoberta>;
+  /** Ausentes cuja vaga ficou coberta (sem aviso de ausência). */
+  cobertos: string[];
   problemas: Problema[];
   /** Quantas vagas automáticas foram regravadas (só em regerarAutomatico). */
   regravadas?: number;
@@ -233,6 +247,40 @@ export async function ausentesNoMes(anoMes: AnoMes): Promise<string[]> {
   return [...new Set(linhas.map((l) => String(l.pessoaId)))];
 }
 
+/** Férias com ferista que tocam o mês: a cobertura vale para o mês inteiro. */
+export async function coberturasNoMes(anoMes: AnoMes): Promise<CoberturaFerias[]> {
+  const db = getDb();
+  const { ano, mes } = anoMes;
+  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+  const fim = paraISO(new Date(ano, mes, 0));
+
+  const linhas = await db
+    .select({
+      id: absences.id,
+      pessoaId: absences.pessoaId,
+      ferista: absences.ferista,
+      cobreFuncaoId: absences.cobreFuncaoId,
+    })
+    .from(absences)
+    .where(
+      and(
+        eq(absences.tipo, "FERIAS"),
+        lte(absences.inicio, fim),
+        gte(absences.fim, inicio),
+      ),
+    )
+    .orderBy(asc(absences.inicio), asc(absences.id));
+
+  return linhas
+    .filter((linha) => Boolean(linha.ferista?.trim()))
+    .map((linha) => ({
+      ausenciaId: String(linha.id),
+      pessoaId: String(linha.pessoaId),
+      ferista: linha.ferista ?? "",
+      cobreFuncaoId: linha.cobreFuncaoId === null ? null : String(linha.cobreFuncaoId),
+    }));
+}
+
 export async function listarPeriodos() {
   const db = getDb();
   return db.select().from(periods).orderBy(asc(periods.ano), asc(periods.mes));
@@ -305,11 +353,12 @@ export async function montarEscala(anoMes: AnoMes): Promise<EscalaDoMes | null> 
   const periodo = await buscarPeriodo(anoMes);
   if (!periodo) return null;
 
-  const [listaPostos, listaPessoas, ausentes, origens] = await Promise.all([
+  const [listaPostos, listaPessoas, ausentes, origens, ferias] = await Promise.all([
     listarPostos(),
     listarPessoasAtivas(),
     ausentesNoMes(anoMes),
     origensDoPeriodo(periodo.id),
+    coberturasNoMes(anoMes),
   ]);
 
   const estado = await estadoDoPeriodo(periodo.id);
@@ -318,6 +367,9 @@ export async function montarEscala(anoMes: AnoMes): Promise<EscalaDoMes | null> 
     completo[posto.codigo] = estado[posto.codigo] ?? null;
   }
 
+  const cobertura = coberturasDaViatura(completo, ferias, listaPessoas, listaPostos);
+  const semCobertura = ausentes.filter((id) => !cobertura.cobertos.includes(id));
+
   return {
     periodo,
     postos: listaPostos,
@@ -325,7 +377,12 @@ export async function montarEscala(anoMes: AnoMes): Promise<EscalaDoMes | null> 
     origens,
     pessoas: listaPessoas,
     ausentes,
-    problemas: validarComposicao(completo, listaPessoas, listaPostos, ausentes),
+    coberturas: cobertura.porVaga,
+    cobertos: cobertura.cobertos,
+    problemas: [
+      ...validarComposicao(completo, listaPessoas, listaPostos, semCobertura),
+      ...cobertura.problemas,
+    ],
   };
 }
 
@@ -622,8 +679,11 @@ export type EscalaRadio = {
   nomesPorId: Record<string, string>;
   ausentes: string[];
   problemas: Problema[];
-  /** Id e nome do bombeiro do F3-BA2 do mês, das faixas fixas. */
-  comunicacao: { pessoaId: string; nome: string } | null;
+  /**
+   * Quem atende as faixas fixas: o bombeiro do F3-BA2 do mês, ou quem cobre
+   * essa vaga nas férias do titular (aí `descricao` explica a cobertura).
+   */
+  comunicacao: { pessoaId: string; nome: string; descricao?: string } | null;
 };
 
 /** Cria a equipe de rádio e as posições dos dois anéis, uma vez só. */
@@ -740,25 +800,34 @@ export async function montarEscalaRadio(
   const periodo = await buscarPeriodo(anoMes);
   if (!periodo) return null;
 
-  const [operadores, ausentes, plantaDoMes, excecoes] = await Promise.all([
+  const [operadores, ausentes, plantaDoMes, excecoes, ferias] = await Promise.all([
     listarOperadoresRadio(),
     ausentesNoMes(anoMes),
     planta ? Promise.resolve(planta) : montarEscala(anoMes),
     excecoesDoPeriodo(periodo.id),
+    coberturasNoMes(anoMes),
   ]);
 
   const configRadio = configRadioDe(config);
   const aneis = aneisDe(operadores);
-  const noites = montarGradeDoMes(anoMes, configRadio, aneis, excecoes);
   const nomesPorId = Object.fromEntries(operadores.map((o) => [o.id, o.nome]));
 
   const pessoaDaComunicacao = plantaDoMes?.estado[POSTO_COMUNICACAO] ?? null;
+  const coberturaDaComunicacao = plantaDoMes?.coberturas[POSTO_COMUNICACAO] ?? null;
   const nomesDoPlantao = new Map((plantaDoMes?.pessoas ?? []).map((p) => [p.id, p.nome]));
+
+  // No rádio o ferista fica sempre no lugar de quem saiu de férias.
+  const coberturasRadio = coberturasDoRadio(ferias, nomesDoPlantao, operadores);
+  const noites = aplicarCoberturasNoRadio(
+    montarGradeDoMes(anoMes, configRadio, aneis, excecoes),
+    coberturasRadio,
+  );
+  const ausentesSemCobertura = ausentes.filter((id) => !coberturasRadio.has(id));
 
   const problemas = [
     ...validarConfigRadio(configRadio),
     ...validarAneis(aneis, operadores),
-    ...validarGradeRadio(noites, new Map(Object.entries(nomesPorId)), ausentes),
+    ...validarGradeRadio(noites, new Map(Object.entries(nomesPorId)), ausentesSemCobertura),
   ];
 
   return {
@@ -769,12 +838,18 @@ export async function montarEscalaRadio(
     nomesPorId,
     ausentes,
     problemas,
-    comunicacao: pessoaDaComunicacao
+    comunicacao: coberturaDaComunicacao
       ? {
-          pessoaId: pessoaDaComunicacao,
-          nome: nomesDoPlantao.get(pessoaDaComunicacao) ?? nomesPorId[pessoaDaComunicacao] ?? "—",
+          pessoaId: coberturaDaComunicacao.pessoaId ?? pessoaDaComunicacao ?? "",
+          nome: coberturaDaComunicacao.nome,
+          descricao: coberturaDaComunicacao.descricao,
         }
-      : null,
+      : pessoaDaComunicacao
+        ? {
+            pessoaId: pessoaDaComunicacao,
+            nome: nomesDoPlantao.get(pessoaDaComunicacao) ?? nomesPorId[pessoaDaComunicacao] ?? "—",
+          }
+        : null,
   };
 }
 

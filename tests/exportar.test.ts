@@ -52,17 +52,17 @@ describe("exportação da escala", () => {
     );
     expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(texto.startsWith("\uFEFF")).toBe(true);
-    expect(linhas[0]).toBe("Vaga;Unidade;Posto;Bombeiro;Função;Origem;Central de comunicação");
+    expect(linhas[0]).toBe("Vaga;Unidade;Posto;Bombeiro;Função;Origem;Central de comunicação;Cobertura de férias");
     expect(linhas).toHaveLength(POSTOS_PADRAO.length + 1);
-    expect(linhas.every((linha) => linha.split(";").length === 7)).toBe(true);
+    expect(linhas.every((linha) => linha.split(";").length === 8)).toBe(true);
   });
 
   it("lista as 10 vagas com nome, função e central de comunicação", async () => {
     const { linhas } = await csvDe(2026, 1);
 
-    expect(linhas).toContain("F3-MC;Viatura F3;MC;Diego Ramos;MC;rodízio;não");
-    expect(linhas).toContain("F3-BA2;Viatura F3;BA 2;Hugo Alves;BA;rodízio;sim");
-    expect(linhas).toContain("CRS-MC;Viatura CRS;MC;Elisa Prado;MC;rodízio;não");
+    expect(linhas).toContain("F3-MC;Viatura F3;MC;Diego Ramos;MC;rodízio;não;");
+    expect(linhas).toContain("F3-BA2;Viatura F3;BA 2;Hugo Alves;BA;rodízio;sim;");
+    expect(linhas).toContain("CRS-MC;Viatura CRS;MC;Elisa Prado;MC;rodízio;não;");
   });
 
   it("distingue a vaga preenchida à mão e a vaga vazia", async () => {
@@ -74,9 +74,9 @@ describe("exportação da escala", () => {
     const { linhas } = await csvDe(fev.ano, fev.mes);
 
     expect(linhas.filter((linha) => linha.includes(";manual;"))).toEqual([
-      "CRS-MC;Viatura CRS;MC;Carla Souza;MC;manual;não",
+      "CRS-MC;Viatura CRS;MC;Carla Souza;MC;manual;não;",
     ]);
-    expect(linhas).toContain("F2-MC;Viatura F2;MC;;;rodízio;não");
+    expect(linhas).toContain("F2-MC;Viatura F2;MC;;;rodízio;não;");
   });
 
   it("recusa mês que ainda não existe", async () => {

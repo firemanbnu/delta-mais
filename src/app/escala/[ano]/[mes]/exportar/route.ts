@@ -24,19 +24,31 @@ export async function GET(_req: Request, ctx: RouteContext<"/escala/[ano]/[mes]/
   const linhas = escala.postos.map((posto) => {
     const pessoaId = escala.estado[posto.codigo];
     const pessoa = pessoaId ? pessoas.get(pessoaId) : undefined;
+    // Quem trabalha de fato no mês; o titular da vaga fica na coluna da cobertura.
+    const cobertura = escala.coberturas[posto.codigo];
     return [
       posto.codigo,
       ROTULO_UNIDADE[posto.unidade],
       posto.rotulo,
-      pessoa?.nome ?? "",
-      pessoa?.funcao ?? "",
+      cobertura?.nome ?? pessoa?.nome ?? "",
+      cobertura ? (cobertura.funcao ?? "ferista") : (pessoa?.funcao ?? ""),
       escala.origens[posto.codigo] === "MANUAL" ? "manual" : "rodízio",
       posto.comunicacao ? "sim" : "não",
+      cobertura ? `${cobertura.descricao} (titular: ${pessoa?.nome ?? "—"})` : "",
     ];
   });
 
   const csv = montarCsv(
-    ["Vaga", "Unidade", "Posto", "Bombeiro", "Função", "Origem", "Central de comunicação"],
+    [
+      "Vaga",
+      "Unidade",
+      "Posto",
+      "Bombeiro",
+      "Função",
+      "Origem",
+      "Central de comunicação",
+      "Cobertura de férias",
+    ],
     linhas,
   );
 

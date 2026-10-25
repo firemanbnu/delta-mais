@@ -8,6 +8,7 @@ import {
   Info,
   Printer,
   TriangleAlert,
+  UserRoundCheck,
 } from "lucide-react";
 
 import { BarraAcoes } from "@/components/escala/barra-acoes";
@@ -91,6 +92,8 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
     ) ?? 0;
 
   const nomesPorId = new Map(escala.pessoas.map((p) => [p.id, p]));
+  // Ausente com a vaga coberta por férias não precisa mais do destaque.
+  const ausentesSemCobertura = escala.ausentes.filter((id) => !escala.cobertos.includes(id));
   const idsOcupadosPorPosto = new Map(
     escala.postos.map((posto) => [
       posto.codigo,
@@ -217,7 +220,8 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                   {vagas.map((posto) => {
                     const pessoaId = escala.estado[posto.codigo];
                     const pessoa = pessoaId ? nomesPorId.get(pessoaId) : null;
-                    const ausente = Boolean(pessoaId && escala.ausentes.includes(pessoaId));
+                    const ausente = Boolean(pessoaId && ausentesSemCobertura.includes(pessoaId));
+                    const cobertura = escala.coberturas[posto.codigo];
                     const origem = escala.origens[posto.codigo] ?? "MANUAL";
 
                     return (
@@ -234,13 +238,23 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                             pessoaId={pessoaId}
                             origem={origem}
                             pessoas={escala.pessoas}
-                            ausentes={escala.ausentes}
+                            ausentes={ausentesSemCobertura}
                             nomesOcupados={idsOcupadosPorPosto.get(posto.codigo) ?? []}
                           />
                           {posto.comunicacao ? (
                             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                               <Info className="size-3" aria-hidden />
                               vaga também atende a central de comunicações
+                            </p>
+                          ) : null}
+                          {cobertura ? (
+                            <p className="mt-1 flex items-start gap-1 text-xs text-sky-700 dark:text-sky-300">
+                              <UserRoundCheck className="mt-px size-3 shrink-0" aria-hidden />
+                              <span>
+                                Neste mês: <strong>{cobertura.nome}</strong>
+                                {cobertura.funcao ? ` (${cobertura.funcao})` : ""} ·{" "}
+                                {cobertura.descricao}
+                              </span>
                             </p>
                           ) : null}
                           {ausente && pessoa ? (

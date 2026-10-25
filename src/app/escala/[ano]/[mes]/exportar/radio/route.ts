@@ -40,8 +40,9 @@ export async function GET(
       const nome = fixo
         ? (radio.comunicacao?.nome ?? "")
         : celula
-          ? (radio.nomesPorId[celula.pessoaId] ?? "")
+          ? (celula.cobertura?.nome ?? radio.nomesPorId[celula.pessoaId] ?? "")
           : "";
+      const cobertura = fixo ? (radio.comunicacao?.descricao ?? "") : (celula?.cobertura?.descricao ?? "");
 
       return [
         formatarDataBR(noite.data),
@@ -52,12 +53,13 @@ export async function GET(
         nome,
         fixo ? "F3-BA2" : "",
         fixo ? "fixa" : celula?.origem === "MANUAL" ? "manual" : "rodízio",
+        cobertura,
       ];
     });
   });
 
   const csv = montarCsv(
-    ["Data", "Dia", "Noite", "Início", "Fim", "Operador", "Posto", "Origem"],
+    ["Data", "Dia", "Noite", "Início", "Fim", "Operador", "Posto", "Origem", "Cobertura de férias"],
     linhas,
   );
 

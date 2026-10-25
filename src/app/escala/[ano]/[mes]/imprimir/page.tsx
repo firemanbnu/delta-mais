@@ -123,14 +123,29 @@ export default async function PaginaImprimir({
                     {vagas.map((posto) => {
                       const pessoaId = escala.estado[posto.codigo];
                       const pessoa = pessoaId ? nomesPorId.get(pessoaId) : null;
+                      const cobertura = escala.coberturas[posto.codigo];
                       return (
                         <tr key={posto.codigo} className="border-b border-black/30 last:border-0">
                           <td className="w-14 px-2 py-1 align-top font-mono text-xs">
                             {posto.rotulo}
                           </td>
                           <td className="px-2 py-1">
-                            <span className="font-semibold">{pessoa?.nome ?? "—"}</span>
-                            {pessoa ? <span className="ml-1">({pessoa.funcao})</span> : null}
+                            {cobertura ? (
+                              <>
+                                <span className="font-semibold">{cobertura.nome}</span>
+                                <span className="ml-1">
+                                  ({cobertura.funcao ?? "ferista"})
+                                </span>
+                                <span className="block text-xs italic">
+                                  titular: {pessoa?.nome ?? "—"} · {cobertura.descricao}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-semibold">{pessoa?.nome ?? "—"}</span>
+                                {pessoa ? <span className="ml-1">({pessoa.funcao})</span> : null}
+                              </>
+                            )}
                             {posto.comunicacao ? (
                               <span className="block text-xs italic">
                                 também na central de comunicações
@@ -244,9 +259,13 @@ key={paraISO(dia)}
                         key={slot.id}
                         className={`border border-black px-0.5 py-0.5 ${
                           celula?.origem === "MANUAL" ? "bg-neutral-200 font-semibold" : ""
-                        }`}
+                        } ${celula?.cobertura ? "italic" : ""}`}
                       >
-                        {celula ? (radio.nomesPorId[celula.pessoaId] ?? "—") : "—"}
+                        {celula
+                          ? celula.cobertura
+                            ? `${celula.cobertura.nome}*`
+                            : (radio.nomesPorId[celula.pessoaId] ?? "—")
+                          : "—"}
                       </td>
                     );
                   })}
@@ -256,8 +275,8 @@ key={paraISO(dia)}
           </table>
 
           <p className="mt-2 text-xs">
-            Célula cinza: troca manual. A entrada e a saída da central (19:00 e 06:00) ficam com o
-            bombeiro escalado no F3-BA2.
+            Célula cinza: troca manual. Nome com *: ferista cobrindo férias. A entrada e a saída
+            da central (19:00 e 06:00) ficam com o bombeiro escalado no F3-BA2.
           </p>
 
           <section className="mt-8 grid grid-cols-2 gap-8 text-xs">
