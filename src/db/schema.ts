@@ -13,12 +13,16 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { FUNCOES, NOITES_DE_SERVICO } from "../lib/dominio";
-import {
-  CAMPOS_AUTOMACAO,
-  FONTES_AUTOMACAO,
-  STATUS_TAREFA,
-  TIPOS_TAREFA,
-} from "../lib/automacao";
+
+/*
+ * Valores das tabelas `automacao_*`, do antigo agente de assinaturas no
+ * Autentique. O recurso foi removido do app; as tabelas continuam no banco
+ * para não apagar dados sem decisão explícita.
+ */
+const TIPOS_TAREFA = ["CONECTAR", "DETECTAR", "POSICIONAR", "FECHAR"] as const;
+const STATUS_TAREFA = ["PENDENTE", "EXECUTANDO", "CONCLUIDO", "FALHOU"] as const;
+const CAMPOS_AUTOMACAO = ["ASSINATURA", "DATA"] as const;
+const FONTES_AUTOMACAO = ["TEXTO", "OCR", "MANUAL"] as const;
 
 export const enumFuncao = pgEnum("funcao", FUNCOES);
 export const enumUnidade = pgEnum("unidade", ["F2", "F3", "CRS"]);
