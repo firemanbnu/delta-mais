@@ -218,7 +218,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                   <TableRow>
                     <TableHead className="w-24 sm:w-32">Vaga</TableHead>
                     <TableHead>Bombeiro escalado</TableHead>
-                    <TableHead className="w-28 text-right">Origem</TableHead>
+                    <TableHead className="hidden w-28 text-right sm:table-cell">Origem</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -268,7 +268,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                             </p>
                           ) : null}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden text-right sm:table-cell">
                           {origem === "MANUAL" ? (
                             <Badge variant="outline" className="text-xs">
                               manual
