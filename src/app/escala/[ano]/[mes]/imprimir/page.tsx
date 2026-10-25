@@ -65,7 +65,7 @@ export default async function PaginaImprimir({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="sem-impressao mb-6 flex items-center justify-between gap-4">
+      <div className="sem-impressao mb-6 flex flex-wrap items-center justify-between gap-4">
         <BotaoLink variant="ghost" size="sm" href={caminho}>
           <ArrowLeft data-icon="inline-start" />
           Voltar para a escala

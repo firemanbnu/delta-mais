@@ -208,9 +208,9 @@ export function GestaoAusencias({
               <TableRow>
                 <TableHead>Bombeiro</TableHead>
                 <TableHead className="w-32">Tipo</TableHead>
-                <TableHead className="w-48">Período</TableHead>
+                <TableHead className="w-40">Período</TableHead>
                 <TableHead>Cobertura</TableHead>
-                <TableHead>Observações</TableHead>
+                <TableHead className="hidden md:table-cell">Observações</TableHead>
                 <TableHead className="w-20 text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -239,10 +239,10 @@ export function GestaoAusencias({
                           {ROTULOS_AUSENCIA[ausencia.tipo]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="whitespace-normal text-muted-foreground">
                         {formatarDataBR(ausencia.inicio)} a {formatarDataBR(ausencia.fim)}
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="min-w-40 whitespace-normal text-sm">
                         {ausencia.ferista ? (
                           <>
                             <span className="font-medium">{ausencia.ferista}</span>
@@ -257,7 +257,7 @@ export function GestaoAusencias({
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
                         {ausencia.observacoes ?? "—"}
                       </TableCell>
                       <TableCell className="text-right">

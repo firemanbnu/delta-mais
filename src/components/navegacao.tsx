@@ -18,7 +18,7 @@ export function Navegacao() {
 
   return (
     <header className="sem-impressao sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:gap-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <Flame className="size-5 text-orange-500" aria-hidden />
           <span>
@@ -29,7 +29,11 @@ export function Navegacao() {
           </span>
         </Link>
 
-        <nav aria-label="Principal" className="flex flex-wrap items-center gap-1 text-sm">
+        {/* No celular o menu fica numa linha só e rola para o lado. */}
+        <nav
+          aria-label="Principal"
+          className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 text-sm [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0"
+        >
           {ITENS.map(({ href, rotulo, icone: Icone }) => {
             const ativo = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
@@ -37,7 +41,7 @@ export function Navegacao() {
                 key={href}
                 href={href}
                 aria-current={ativo ? "page" : undefined}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 transition-colors ${
                   ativo
                     ? "bg-secondary font-medium text-secondary-foreground"
                     : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"

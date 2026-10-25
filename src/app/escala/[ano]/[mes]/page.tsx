@@ -134,7 +134,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
             <BotaoLink
               variant="outline"
@@ -216,7 +216,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-32">Vaga</TableHead>
+                    <TableHead className="w-24 sm:w-32">Vaga</TableHead>
                     <TableHead>Bombeiro escalado</TableHead>
                     <TableHead className="w-28 text-right">Origem</TableHead>
                   </TableRow>
@@ -235,7 +235,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                           {posto.codigo}
                           <span className="ml-1 text-muted-foreground">{posto.rotulo}</span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="min-w-48 whitespace-normal">
                           <CelulaVaga
                             ano={anoNum}
                             mes={mesNum}
