@@ -134,6 +134,36 @@ noites em que há equipe, nunca as noites inversas.
 A edição da composição dos anéis pela interface ficou fora da primeira versão: os
 anéis são semeados por `db:seed`.
 
+### Férias e ferista
+
+Ao registrar férias, informe o ferista (só o nome, sem cadastro) e quem cobre a
+função na viatura:
+
+- **O próprio ferista cobre a função:** ele entra no lugar de quem está de férias
+  em tudo: viatura, rádio e faxina.
+- **Outra pessoa cobre a função:** ela vai para a vaga de quem está de férias e o
+  ferista fica com a vaga dela na viatura. No rádio e na faxina o ferista cobre
+  normalmente quem está de férias.
+
+A cobertura vale para o mês inteiro em que as férias tocam. Ela é calculada a cada
+leitura (`src/lib/cobertura.ts`) e não grava nada em `assignments`: a vaga
+continua com o titular, para o rodízio do mês seguinte sair certo, e apagar as
+férias desfaz a cobertura. A tela, a impressão e os CSVs mostram quem trabalha de
+fato e o titular.
+
+Os operadores de rádio são cadastros separados dos bombeiros das viaturas. Até os
+cadastros serem unificados, o operador é ligado às férias pelo nome: "Vanzella"
+bate com "Vanzella" e com "Marcos Vanzella".
+
+### Faxina
+
+`src/lib/faxina.ts`. Cozinha/refeitório (Ataide), sala de comunicação (Catia),
+liderança (Alexandre) e lixo (Adalto) são fixos. Os outros seis giram uma posição
+por mês: vestiário masc. → corredores → garagem → auditório → alojamento masc. →
+WC's do térreo → vestiário. `MES_BASE_FAXINA` (outubro de 2026) é o mês da
+posição de partida em `RODIZIO_BASE_FAXINA`. A faxina aparece na escala do mês e
+na folha impressa do plantão.
+
 ### Observações de produção
 
 - O app não tem autenticação: quem tiver a URL edita a escala.

@@ -20,6 +20,7 @@ import {
   type CoberturaFerias,
   type OcupacaoCoberta,
 } from "@/lib/cobertura";
+import { montarFaxina, type CelulaFaxina } from "@/lib/faxina";
 import {
   OPERADORES_POR_ANEL,
   OPERADORES_RADIO_PADRAO,
@@ -245,6 +246,21 @@ export async function ausentesNoMes(anoMes: AnoMes): Promise<string[]> {
     .where(and(lte(absences.inicio, fim), gte(absences.fim, inicio)));
 
   return [...new Set(linhas.map((l) => String(l.pessoaId)))];
+}
+
+/**
+ * Escala de faxina do mês. O rodízio sai do mês e o ferista entra no lugar de
+ * quem está de férias, igual ao rádio, independente de quem cobre a função.
+ */
+export async function montarEscalaFaxina(
+  anoMes: AnoMes,
+  planta: EscalaDoMes | null = null,
+): Promise<CelulaFaxina[]> {
+  const [ferias, pessoas] = await Promise.all([
+    coberturasNoMes(anoMes),
+    planta ? Promise.resolve(planta.pessoas) : listarPessoasAtivas(),
+  ]);
+  return montarFaxina(anoMes, ferias, new Map(pessoas.map((p) => [p.id, p.nome])));
 }
 
 /** Férias com ferista que tocam o mês: a cobertura vale para o mês inteiro. */

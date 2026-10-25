@@ -157,12 +157,25 @@ export function coberturasDaViatura(
 /** Ferista que cobre cada operador de rádio no mês, por id do operador. */
 export type CoberturasDoRadio = Map<string, { nome: string; descricao: string }>;
 
-function normalizar(nome: string): string {
+/** Normaliza para comparar nomes sem acento, maiúscula ou espaço sobrando. */
+export function normalizarNome(nome: string): string {
   return nome
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+}
+
+/**
+ * O nome curto das escalas ("Vanzella") bate com o cadastro quando é igual ou
+ * quando aparece como palavra inteira no nome completo ("Marcos Vanzella").
+ */
+export function mesmoNome(curto: string, cadastro: string): boolean {
+  const a = normalizarNome(curto);
+  const b = normalizarNome(cadastro);
+  if (!a || !b) return false;
+  return a === b || b.split(" ").includes(a) || a.split(" ").includes(b);
 }
 
 /**
@@ -170,7 +183,7 @@ function normalizar(nome: string): string {
  *
  * Os operadores de rádio são cadastros separados dos bombeiros das viaturas
  * (equipe de rádio do seed). Até os cadastros serem unificados, o operador é
- * ligado às férias pelo id ou, se não bater, pelo mesmo nome.
+ * ligado às férias pelo id ou, se não bater, pelo nome (ver `mesmoNome`).
  */
 export function coberturasDoRadio(
   coberturas: readonly CoberturaFerias[],
@@ -184,11 +197,11 @@ export function coberturasDoRadio(
     if (!ferista) continue;
 
     const nomeAusente = nomesDoQuadro.get(cobertura.pessoaId);
-    const chave = nomeAusente ? normalizar(nomeAusente) : null;
 
     for (const operador of operadores) {
       const mesmo =
-        operador.id === cobertura.pessoaId || (chave !== null && normalizar(operador.nome) === chave);
+        operador.id === cobertura.pessoaId ||
+        (nomeAusente !== undefined && mesmoNome(operador.nome, nomeAusente));
       if (!mesmo) continue;
       resultado.set(operador.id, {
         nome: ferista,

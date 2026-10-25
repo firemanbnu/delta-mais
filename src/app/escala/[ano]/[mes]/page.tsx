@@ -13,6 +13,7 @@ import {
 
 import { BarraAcoes } from "@/components/escala/barra-acoes";
 import { CelulaVaga } from "@/components/escala/celula-vaga";
+import { GradeFaxina } from "@/components/faxina/grade-faxina";
 import { BotaoRestaurarRadio } from "@/components/radio/botao-restaurar-radio";
 import { GradeRadio } from "@/components/radio/grade-radio";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ import {
   lerConfiguracoes,
   listarPeriodos,
   montarEscala,
+  montarEscalaFaxina,
   montarEscalaRadio,
   semearOperadoresRadio,
   semearPostos,
@@ -75,7 +77,10 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
   const escala = await montarEscala({ ano: anoNum, mes: mesNum });
   if (!escala) notFound();
 
-  const radio = await montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala);
+  const [radio, faxina] = await Promise.all([
+    montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala),
+    montarEscalaFaxina({ ano: anoNum, mes: mesNum }, escala),
+  ]);
 
   const anterior = await PeriodoAnterior({ ano: anoNum, mes: mesNum });
   const noites = noitesDeServicoNoMes(anoNum, mesNum, config.dataAncora, config.noiteDeServico);
@@ -368,6 +373,17 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           </p>
         </section>
       )}
+
+      <section className="mt-8">
+        <h2 className="font-semibold">Faxina</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cozinha, sala de comunicação, liderança e lixo são fixos. Os demais locais giram a cada
+          mês: vestiário → corredores → garagem → auditório → alojamento → WC&apos;s do térreo.
+        </p>
+        <div className="mt-3">
+          <GradeFaxina celulas={faxina} />
+        </div>
+      </section>
     </div>
   );
 }
