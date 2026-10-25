@@ -7,6 +7,7 @@ import {
   buscarPeriodo,
   lerConfiguracoes,
   montarEscala,
+  montarEscalaFaxina,
   montarEscalaRadio,
   semearOperadoresRadio,
   semearPostos,
@@ -48,7 +49,10 @@ export default async function PaginaImprimir({
   ]);
   if (!escala) notFound();
 
-  const radio = await montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala);
+  const [radio, faxina] = await Promise.all([
+    montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala),
+    montarEscalaFaxina({ ano: anoNum, mes: mesNum }, escala),
+  ]);
 
   const nomesPorId = new Map(escala.pessoas.map((p) => [p.id, p]));
   const unidades: Unidade[] = ["F2", "F3", "CRS"];
@@ -61,7 +65,7 @@ export default async function PaginaImprimir({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="sem-impressao mb-6 flex items-center justify-between gap-4">
+      <div className="sem-impressao mb-6 flex flex-wrap items-center justify-between gap-4">
         <BotaoLink variant="ghost" size="sm" href={caminho}>
           <ArrowLeft data-icon="inline-start" />
           Voltar para a escala
@@ -123,14 +127,29 @@ export default async function PaginaImprimir({
                     {vagas.map((posto) => {
                       const pessoaId = escala.estado[posto.codigo];
                       const pessoa = pessoaId ? nomesPorId.get(pessoaId) : null;
+                      const cobertura = escala.coberturas[posto.codigo];
                       return (
                         <tr key={posto.codigo} className="border-b border-black/30 last:border-0">
                           <td className="w-14 px-2 py-1 align-top font-mono text-xs">
                             {posto.rotulo}
                           </td>
                           <td className="px-2 py-1">
-                            <span className="font-semibold">{pessoa?.nome ?? "—"}</span>
-                            {pessoa ? <span className="ml-1">({pessoa.funcao})</span> : null}
+                            {cobertura ? (
+                              <>
+                                <span className="font-semibold">{cobertura.nome}</span>
+                                <span className="ml-1">
+                                  ({cobertura.funcao ?? "ferista"})
+                                </span>
+                                <span className="block text-xs italic">
+                                  titular: {pessoa?.nome ?? "—"} · {cobertura.descricao}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-semibold">{pessoa?.nome ?? "—"}</span>
+                                {pessoa ? <span className="ml-1">({pessoa.funcao})</span> : null}
+                              </>
+                            )}
                             {posto.comunicacao ? (
                               <span className="block text-xs italic">
                                 também na central de comunicações
@@ -182,6 +201,35 @@ key={paraISO(dia)}
 <p className="mt-2 text-xs">
             ● noite de serviço ({inicio} às {fim}) · a equipe folga nas noites marcadas com ○
           </p>
+        </section>
+
+        <section className="mt-6">
+          <h2 className="text-sm font-bold uppercase">Faxina</h2>
+          <table className="mt-2 w-full table-fixed border-collapse text-xs">
+            <tbody>
+              {[faxina.slice(0, 5), faxina.slice(5)].map((linha, indice) => (
+                <tr key={indice}>
+                  {linha.map((celula) => (
+                    <td key={celula.local.id} className="border border-black px-1 py-1 align-top">
+                      <span className="block text-[9px] uppercase">{celula.local.rotulo}</span>
+                      <span className={`font-bold uppercase ${celula.cobertura ? "italic" : ""}`}>
+                        {celula.cobertura ? `${celula.cobertura.nome}*` : celula.nome}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {faxina.some((celula) => celula.cobertura) ? (
+            <p className="mt-1 text-xs">
+              * ferista:{" "}
+              {faxina
+                .filter((celula) => celula.cobertura)
+                .map((celula) => `${celula.cobertura?.nome} no lugar de ${celula.nome}`)
+                .join("; ")}
+            </p>
+          ) : null}
         </section>
 
         <section className="mt-10 grid grid-cols-2 gap-8 text-xs">
@@ -244,9 +292,13 @@ key={paraISO(dia)}
                         key={slot.id}
                         className={`border border-black px-0.5 py-0.5 ${
                           celula?.origem === "MANUAL" ? "bg-neutral-200 font-semibold" : ""
-                        }`}
+                        } ${celula?.cobertura ? "italic" : ""}`}
                       >
-                        {celula ? (radio.nomesPorId[celula.pessoaId] ?? "—") : "—"}
+                        {celula
+                          ? celula.cobertura
+                            ? `${celula.cobertura.nome}*`
+                            : (radio.nomesPorId[celula.pessoaId] ?? "—")
+                          : "—"}
                       </td>
                     );
                   })}
@@ -256,8 +308,8 @@ key={paraISO(dia)}
           </table>
 
           <p className="mt-2 text-xs">
-            Célula cinza: troca manual. A entrada e a saída da central (19:00 e 06:00) ficam com o
-            bombeiro escalado no F3-BA2.
+            Célula cinza: troca manual. Nome com *: ferista cobrindo férias. A entrada e a saída
+            da central (19:00 e 06:00) ficam com o bombeiro escalado no F3-BA2.
           </p>
 
           <section className="mt-8 grid grid-cols-2 gap-8 text-xs">

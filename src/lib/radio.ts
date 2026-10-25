@@ -86,6 +86,11 @@ export type OrigemCelula = "AUTO" | "MANUAL";
 export type CelulaRadio = {
   pessoaId: string;
   origem: OrigemCelula;
+  /**
+   * Ferista que trabalha na faixa no lugar de `pessoaId`, que está de férias.
+   * A faixa continua sendo do operador: só o nome mostrado muda.
+   */
+  cobertura?: { nome: string; descricao: string };
 };
 
 export type NoiteDeRadio = {

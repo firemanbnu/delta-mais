@@ -24,7 +24,7 @@ export type PropsGradeRadio = {
   noites: NoiteDeRadio[];
   operadores: OperadorEscolhivel[];
   ausentes: string[];
-  comunicacao: { pessoaId: string; nome: string } | null;
+  comunicacao: { pessoaId: string; nome: string; descricao?: string } | null;
   legendas?: boolean;
 };
 
@@ -38,6 +38,9 @@ export function GradeRadio({
   legendas = true,
 }: PropsGradeRadio) {
   if (noites.length === 0) return null;
+
+  const nomeDoOperador = (id: string) =>
+    operadores.find((operador) => operador.id === id)?.nome ?? "—";
 
   return (
     <div className="space-y-3">
@@ -75,7 +78,12 @@ export function GradeRadio({
                     if (slot.bloco === "FIXO") {
                       return (
                         <TableCell key={slot.id} className="bg-muted/40 align-middle">
-                          <span className="block text-xs font-medium">{comunicacao?.nome ?? "—"}</span>
+                          <span
+                            className="block text-xs font-medium"
+                            title={comunicacao?.descricao}
+                          >
+                            {comunicacao?.nome ?? "—"}
+                          </span>
                           <span className="block text-[10px] text-muted-foreground">
                             {rotuloSlot(slot)}
                           </span>
@@ -85,6 +93,25 @@ export function GradeRadio({
 
                     const celula = noite.slots[slot.id];
                     const ausente = celula ? ausentes.includes(celula.pessoaId) : false;
+
+                    // Faixa coberta por ferista: mostra quem trabalha de fato. A troca
+                    // manual fica bloqueada aqui; para mudar, edite as férias.
+                    if (celula?.cobertura) {
+                      return (
+                        <TableCell
+                          key={slot.id}
+                          className="bg-sky-500/10 align-middle"
+                          title={celula.cobertura.descricao}
+                        >
+                          <span className="block text-xs font-medium">
+                            {celula.cobertura.nome}
+                          </span>
+                          <span className="block text-[10px] text-muted-foreground">
+                            ferista · {nomeDoOperador(celula.pessoaId)}
+                          </span>
+                        </TableCell>
+                      );
+                    }
 
                     return (
                       <TableCell

@@ -1,8 +1,7 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { getDb } from "./index";
 import { POSTOS_PADRAO, type Funcao, type NoiteDeServico } from "@/lib/dominio";
-import type { TipoTarefa } from "@/lib/automacao";
 import { chaveAnoMes, formatarDataBR, paraISO, rotuloMes, type AnoMes } from "@/lib/calendario";
 import {
   avancarRodizio,
@@ -13,6 +12,14 @@ import {
   type Posto,
   type Problema,
 } from "@/lib/rotacao";
+import {
+  aplicarCoberturasNoRadio,
+  coberturasDaViatura,
+  coberturasDoRadio,
+  type CoberturaFerias,
+  type OcupacaoCoberta,
+} from "@/lib/cobertura";
+import { montarFaxina, type CelulaFaxina } from "@/lib/faxina";
 import {
   OPERADORES_POR_ANEL,
   OPERADORES_RADIO_PADRAO,
@@ -32,9 +39,6 @@ import {
 import {
   absences,
   assignments,
-  automacaoAgente,
-  automacaoComando,
-  automacaoPosicao,
   people,
   periods,
   posts,
@@ -42,9 +46,6 @@ import {
   radioExcecao,
   settings,
   teams,
-  type AutomacaoAgente,
-  type AutomacaoComando,
-  type AutomacaoPosicao,
 } from "./schema";
 
 export type PessoaComEquipe = {
@@ -76,6 +77,13 @@ export type EscalaDoMes = {
   origens: Record<string, "AUTO" | "MANUAL">;
   pessoas: PessoaResumo[];
   ausentes: string[];
+  /**
+   * Quem trabalha de fato nas vagas cobertas por férias neste mês. A vaga em
+   * `estado` continua com o titular; isto é só a camada de cima.
+   */
+  coberturas: Record<string, OcupacaoCoberta>;
+  /** Ausentes cuja vaga ficou coberta (sem aviso de ausência). */
+  cobertos: string[];
   problemas: Problema[];
   /** Quantas vagas automáticas foram regravadas (só em regerarAutomatico). */
   regravadas?: number;
@@ -233,6 +241,55 @@ export async function ausentesNoMes(anoMes: AnoMes): Promise<string[]> {
   return [...new Set(linhas.map((l) => String(l.pessoaId)))];
 }
 
+/**
+ * Escala de faxina do mês. O rodízio sai do mês e o ferista entra no lugar de
+ * quem está de férias, igual ao rádio, independente de quem cobre a função.
+ */
+export async function montarEscalaFaxina(
+  anoMes: AnoMes,
+  planta: EscalaDoMes | null = null,
+): Promise<CelulaFaxina[]> {
+  const [ferias, pessoas] = await Promise.all([
+    coberturasNoMes(anoMes),
+    planta ? Promise.resolve(planta.pessoas) : listarPessoasAtivas(),
+  ]);
+  return montarFaxina(anoMes, ferias, new Map(pessoas.map((p) => [p.id, p.nome])));
+}
+
+/** Férias com ferista que tocam o mês: a cobertura vale para o mês inteiro. */
+export async function coberturasNoMes(anoMes: AnoMes): Promise<CoberturaFerias[]> {
+  const db = getDb();
+  const { ano, mes } = anoMes;
+  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+  const fim = paraISO(new Date(ano, mes, 0));
+
+  const linhas = await db
+    .select({
+      id: absences.id,
+      pessoaId: absences.pessoaId,
+      ferista: absences.ferista,
+      cobreFuncaoId: absences.cobreFuncaoId,
+    })
+    .from(absences)
+    .where(
+      and(
+        eq(absences.tipo, "FERIAS"),
+        lte(absences.inicio, fim),
+        gte(absences.fim, inicio),
+      ),
+    )
+    .orderBy(asc(absences.inicio), asc(absences.id));
+
+  return linhas
+    .filter((linha) => Boolean(linha.ferista?.trim()))
+    .map((linha) => ({
+      ausenciaId: String(linha.id),
+      pessoaId: String(linha.pessoaId),
+      ferista: linha.ferista ?? "",
+      cobreFuncaoId: linha.cobreFuncaoId === null ? null : String(linha.cobreFuncaoId),
+    }));
+}
+
 export async function listarPeriodos() {
   const db = getDb();
   return db.select().from(periods).orderBy(asc(periods.ano), asc(periods.mes));
@@ -305,11 +362,12 @@ export async function montarEscala(anoMes: AnoMes): Promise<EscalaDoMes | null> 
   const periodo = await buscarPeriodo(anoMes);
   if (!periodo) return null;
 
-  const [listaPostos, listaPessoas, ausentes, origens] = await Promise.all([
+  const [listaPostos, listaPessoas, ausentes, origens, ferias] = await Promise.all([
     listarPostos(),
     listarPessoasAtivas(),
     ausentesNoMes(anoMes),
     origensDoPeriodo(periodo.id),
+    coberturasNoMes(anoMes),
   ]);
 
   const estado = await estadoDoPeriodo(periodo.id);
@@ -318,6 +376,9 @@ export async function montarEscala(anoMes: AnoMes): Promise<EscalaDoMes | null> 
     completo[posto.codigo] = estado[posto.codigo] ?? null;
   }
 
+  const cobertura = coberturasDaViatura(completo, ferias, listaPessoas, listaPostos);
+  const semCobertura = ausentes.filter((id) => !cobertura.cobertos.includes(id));
+
   return {
     periodo,
     postos: listaPostos,
@@ -325,7 +386,12 @@ export async function montarEscala(anoMes: AnoMes): Promise<EscalaDoMes | null> 
     origens,
     pessoas: listaPessoas,
     ausentes,
-    problemas: validarComposicao(completo, listaPessoas, listaPostos, ausentes),
+    coberturas: cobertura.porVaga,
+    cobertos: cobertura.cobertos,
+    problemas: [
+      ...validarComposicao(completo, listaPessoas, listaPostos, semCobertura),
+      ...cobertura.problemas,
+    ],
   };
 }
 
@@ -622,8 +688,11 @@ export type EscalaRadio = {
   nomesPorId: Record<string, string>;
   ausentes: string[];
   problemas: Problema[];
-  /** Id e nome do bombeiro do F3-BA2 do mês, das faixas fixas. */
-  comunicacao: { pessoaId: string; nome: string } | null;
+  /**
+   * Quem atende as faixas fixas: o bombeiro do F3-BA2 do mês, ou quem cobre
+   * essa vaga nas férias do titular (aí `descricao` explica a cobertura).
+   */
+  comunicacao: { pessoaId: string; nome: string; descricao?: string } | null;
 };
 
 /** Cria a equipe de rádio e as posições dos dois anéis, uma vez só. */
@@ -740,25 +809,34 @@ export async function montarEscalaRadio(
   const periodo = await buscarPeriodo(anoMes);
   if (!periodo) return null;
 
-  const [operadores, ausentes, plantaDoMes, excecoes] = await Promise.all([
+  const [operadores, ausentes, plantaDoMes, excecoes, ferias] = await Promise.all([
     listarOperadoresRadio(),
     ausentesNoMes(anoMes),
     planta ? Promise.resolve(planta) : montarEscala(anoMes),
     excecoesDoPeriodo(periodo.id),
+    coberturasNoMes(anoMes),
   ]);
 
   const configRadio = configRadioDe(config);
   const aneis = aneisDe(operadores);
-  const noites = montarGradeDoMes(anoMes, configRadio, aneis, excecoes);
   const nomesPorId = Object.fromEntries(operadores.map((o) => [o.id, o.nome]));
 
   const pessoaDaComunicacao = plantaDoMes?.estado[POSTO_COMUNICACAO] ?? null;
+  const coberturaDaComunicacao = plantaDoMes?.coberturas[POSTO_COMUNICACAO] ?? null;
   const nomesDoPlantao = new Map((plantaDoMes?.pessoas ?? []).map((p) => [p.id, p.nome]));
+
+  // No rádio o ferista fica sempre no lugar de quem saiu de férias.
+  const coberturasRadio = coberturasDoRadio(ferias, nomesDoPlantao, operadores);
+  const noites = aplicarCoberturasNoRadio(
+    montarGradeDoMes(anoMes, configRadio, aneis, excecoes),
+    coberturasRadio,
+  );
+  const ausentesSemCobertura = ausentes.filter((id) => !coberturasRadio.has(id));
 
   const problemas = [
     ...validarConfigRadio(configRadio),
     ...validarAneis(aneis, operadores),
-    ...validarGradeRadio(noites, new Map(Object.entries(nomesPorId)), ausentes),
+    ...validarGradeRadio(noites, new Map(Object.entries(nomesPorId)), ausentesSemCobertura),
   ];
 
   return {
@@ -769,12 +847,18 @@ export async function montarEscalaRadio(
     nomesPorId,
     ausentes,
     problemas,
-    comunicacao: pessoaDaComunicacao
+    comunicacao: coberturaDaComunicacao
       ? {
-          pessoaId: pessoaDaComunicacao,
-          nome: nomesDoPlantao.get(pessoaDaComunicacao) ?? nomesPorId[pessoaDaComunicacao] ?? "—",
+          pessoaId: coberturaDaComunicacao.pessoaId ?? pessoaDaComunicacao ?? "",
+          nome: coberturaDaComunicacao.nome,
+          descricao: coberturaDaComunicacao.descricao,
         }
-      : null,
+      : pessoaDaComunicacao
+        ? {
+            pessoaId: pessoaDaComunicacao,
+            nome: nomesDoPlantao.get(pessoaDaComunicacao) ?? nomesPorId[pessoaDaComunicacao] ?? "—",
+          }
+        : null,
   };
 }
 
@@ -934,108 +1018,4 @@ export async function restaurarRadioAutomatico(anoMes: AnoMes) {
   const periodo = await buscarPeriodo(anoMes);
   if (!periodo) throw new Error("Mês não encontrado.");
   await db.delete(radioExcecao).where(eq(radioExcecao.periodoId, periodo.id));
-}
-
-/* -------------------------------------------------------------------------
- * Automação (fila de comandos para o agente local)
- * ---------------------------------------------------------------------- */
-
-/** Enfileira um comando para o agente local executar. */
-export async function criarComando(
-  tipo: TipoTarefa,
-  payload?: unknown,
-): Promise<AutomacaoComando> {
-  const db = getDb();
-  const [comando] = await db
-    .insert(automacaoComando)
-    .values({ tipo, payload: payload ? JSON.stringify(payload) : null })
-    .returning();
-  return comando;
-}
-
-/**
- * Retoma o comando pendente mais antigo e o marca como EXECUTANDO num único
- * statement (`UPDATE ... WHERE id IN (SELECT ...) RETURNING`), que é atômico
- * até no driver HTTP do Neon, sem transação.
- */
-export async function retirarProximoComando(): Promise<AutomacaoComando | null> {
-  const db = getDb();
-  const pendente = db
-    .select({ id: automacaoComando.id })
-    .from(automacaoComando)
-    .where(eq(automacaoComando.status, "PENDENTE"))
-    .orderBy(automacaoComando.criadoEm)
-    .limit(1);
-
-  const [comando] = await db
-    .update(automacaoComando)
-    .set({ status: "EXECUTANDO", atualizadoEm: new Date() })
-    .where(inArray(automacaoComando.id, pendente))
-    .returning();
-  return comando ?? null;
-}
-
-export async function concluirComando(id: number, resultado?: unknown) {
-  const db = getDb();
-  await db
-    .update(automacaoComando)
-    .set({
-      status: "CONCLUIDO",
-      resultado: resultado === undefined ? null : JSON.stringify(resultado),
-      erro: null,
-      atualizadoEm: new Date(),
-    })
-    .where(eq(automacaoComando.id, id));
-}
-
-export async function falharComando(id: number, erro: string) {
-  const db = getDb();
-  await db
-    .update(automacaoComando)
-    .set({ status: "FALHOU", erro, atualizadoEm: new Date() })
-    .where(eq(automacaoComando.id, id));
-}
-
-export async function listarComandosRecentes(limite = 10): Promise<AutomacaoComando[]> {
-  const db = getDb();
-  return db
-    .select()
-    .from(automacaoComando)
-    .orderBy(desc(automacaoComando.criadoEm))
-    .limit(limite);
-}
-
-/* ---------------------------------------------------------------------- */
-
-/** Tabela de revisão: substitui as linhas pelas detectadas/editadas. */
-export async function substituirPosicoes(
-  posicoes: Omit<AutomacaoPosicao, "id">[],
-): Promise<void> {
-  const db = getDb();
-  await db.delete(automacaoPosicao);
-  if (posicoes.length === 0) return;
-  await db.insert(automacaoPosicao).values(posicoes);
-}
-
-export async function listarPosicoes(): Promise<AutomacaoPosicao[]> {
-  const db = getDb();
-  return db.select().from(automacaoPosicao).orderBy(automacaoPosicao.ordem);
-}
-
-/** Sobe o heartbeat do agente local (upsert no registro único). */
-export async function sinalizarAgente(urlAtual: string | null, navegadorAberto: boolean) {
-  const db = getDb();
-  await db
-    .insert(automacaoAgente)
-    .values({ id: 1, urlAtual, navegadorAberto, batidoEm: new Date() })
-    .onConflictDoUpdate({
-      target: automacaoAgente.id,
-      set: { urlAtual, navegadorAberto, batidoEm: new Date() },
-    });
-}
-
-export async function lerAgente(): Promise<AutomacaoAgente | null> {
-  const db = getDb();
-  const [agente] = await db.select().from(automacaoAgente).where(eq(automacaoAgente.id, 1));
-  return agente ?? null;
 }

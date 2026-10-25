@@ -8,10 +8,12 @@ import {
   Info,
   Printer,
   TriangleAlert,
+  UserRoundCheck,
 } from "lucide-react";
 
 import { BarraAcoes } from "@/components/escala/barra-acoes";
 import { CelulaVaga } from "@/components/escala/celula-vaga";
+import { GradeFaxina } from "@/components/faxina/grade-faxina";
 import { BotaoRestaurarRadio } from "@/components/radio/botao-restaurar-radio";
 import { GradeRadio } from "@/components/radio/grade-radio";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +32,7 @@ import {
   lerConfiguracoes,
   listarPeriodos,
   montarEscala,
+  montarEscalaFaxina,
   montarEscalaRadio,
   semearOperadoresRadio,
   semearPostos,
@@ -74,7 +77,10 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
   const escala = await montarEscala({ ano: anoNum, mes: mesNum });
   if (!escala) notFound();
 
-  const radio = await montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala);
+  const [radio, faxina] = await Promise.all([
+    montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala),
+    montarEscalaFaxina({ ano: anoNum, mes: mesNum }, escala),
+  ]);
 
   const anterior = await PeriodoAnterior({ ano: anoNum, mes: mesNum });
   const noites = noitesDeServicoNoMes(anoNum, mesNum, config.dataAncora, config.noiteDeServico);
@@ -91,6 +97,8 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
     ) ?? 0;
 
   const nomesPorId = new Map(escala.pessoas.map((p) => [p.id, p]));
+  // Ausente com a vaga coberta por férias não precisa mais do destaque.
+  const ausentesSemCobertura = escala.ausentes.filter((id) => !escala.cobertos.includes(id));
   const idsOcupadosPorPosto = new Map(
     escala.postos.map((posto) => [
       posto.codigo,
@@ -126,7 +134,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
             <BotaoLink
               variant="outline"
@@ -208,16 +216,17 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-32">Vaga</TableHead>
+                    <TableHead className="w-24 sm:w-32">Vaga</TableHead>
                     <TableHead>Bombeiro escalado</TableHead>
-                    <TableHead className="w-28 text-right">Origem</TableHead>
+                    <TableHead className="hidden w-28 text-right sm:table-cell">Origem</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {vagas.map((posto) => {
                     const pessoaId = escala.estado[posto.codigo];
                     const pessoa = pessoaId ? nomesPorId.get(pessoaId) : null;
-                    const ausente = Boolean(pessoaId && escala.ausentes.includes(pessoaId));
+                    const ausente = Boolean(pessoaId && ausentesSemCobertura.includes(pessoaId));
+                    const cobertura = escala.coberturas[posto.codigo];
                     const origem = escala.origens[posto.codigo] ?? "MANUAL";
 
                     return (
@@ -226,7 +235,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                           {posto.codigo}
                           <span className="ml-1 text-muted-foreground">{posto.rotulo}</span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="min-w-48 whitespace-normal">
                           <CelulaVaga
                             ano={anoNum}
                             mes={mesNum}
@@ -234,7 +243,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                             pessoaId={pessoaId}
                             origem={origem}
                             pessoas={escala.pessoas}
-                            ausentes={escala.ausentes}
+                            ausentes={ausentesSemCobertura}
                             nomesOcupados={idsOcupadosPorPosto.get(posto.codigo) ?? []}
                           />
                           {posto.comunicacao ? (
@@ -243,13 +252,23 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
                               vaga também atende a central de comunicações
                             </p>
                           ) : null}
+                          {cobertura ? (
+                            <p className="mt-1 flex items-start gap-1 text-xs text-sky-700 dark:text-sky-300">
+                              <UserRoundCheck className="mt-px size-3 shrink-0" aria-hidden />
+                              <span>
+                                Neste mês: <strong>{cobertura.nome}</strong>
+                                {cobertura.funcao ? ` (${cobertura.funcao})` : ""} ·{" "}
+                                {cobertura.descricao}
+                              </span>
+                            </p>
+                          ) : null}
                           {ausente && pessoa ? (
                             <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
                               {pessoa.nome} consta como ausente neste mês.
                             </p>
                           ) : null}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="hidden text-right sm:table-cell">
                           {origem === "MANUAL" ? (
                             <Badge variant="outline" className="text-xs">
                               manual
@@ -354,6 +373,17 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           </p>
         </section>
       )}
+
+      <section className="mt-8">
+        <h2 className="font-semibold">Faxina</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cozinha, sala de comunicação, liderança e lixo são fixos. Os demais locais giram a cada
+          mês: vestiário → corredores → garagem → auditório → alojamento → WC&apos;s do térreo.
+        </p>
+        <div className="mt-3">
+          <GradeFaxina celulas={faxina} />
+        </div>
+      </section>
     </div>
   );
 }

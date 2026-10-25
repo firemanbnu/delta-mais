@@ -44,7 +44,7 @@ export function GestaoQuadro({ pessoas }: { pessoas: PessoaComEquipe[] }) {
 
   return (
     <>
-      <div className="sem-impressao mb-4 flex items-center justify-between gap-4">
+      <div className="sem-impressao mb-4 flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           {pessoas.filter((p) => p.ativo).length} ativos de {pessoas.length} cadastrados
         </p>
@@ -67,8 +67,8 @@ export function GestaoQuadro({ pessoas }: { pessoas: PessoaComEquipe[] }) {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead className="w-24">Função</TableHead>
-                <TableHead className="w-28">Matrícula</TableHead>
-                <TableHead className="w-40">Telefone</TableHead>
+                <TableHead className="hidden w-28 md:table-cell">Matrícula</TableHead>
+                <TableHead className="hidden w-40 sm:table-cell">Telefone</TableHead>
                 <TableHead className="w-24">Situação</TableHead>
                 <TableHead className="w-36 text-right">Ações</TableHead>
               </TableRow>
@@ -144,8 +144,12 @@ function LinhaPessoa({
           {pessoa.funcao}
         </Badge>
       </TableCell>
-      <TableCell className="text-muted-foreground">{pessoa.matricula ?? "—"}</TableCell>
-      <TableCell className="text-muted-foreground">{pessoa.telefone ?? "—"}</TableCell>
+      <TableCell className="hidden text-muted-foreground md:table-cell">
+        {pessoa.matricula ?? "—"}
+      </TableCell>
+      <TableCell className="hidden text-muted-foreground sm:table-cell">
+        {pessoa.telefone ?? "—"}
+      </TableCell>
       <TableCell>
         <Badge variant={pessoa.ativo ? "default" : "secondary"} className="text-xs">
           {pessoa.ativo ? "Ativo" : "Inativo"}
