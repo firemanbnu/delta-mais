@@ -19,6 +19,7 @@ import {
   type CoberturaFerias,
   type OcupacaoCoberta,
 } from "@/lib/cobertura";
+import { montarAbastecimento } from "@/lib/abastecimento";
 import { montarFaxina, type CelulaFaxina } from "@/lib/faxina";
 import {
   OPERADORES_POR_ANEL,
@@ -254,6 +255,21 @@ export async function montarEscalaFaxina(
     planta ? Promise.resolve(planta.pessoas) : listarPessoasAtivas(),
   ]);
   return montarFaxina(anoMes, ferias, new Map(pessoas.map((p) => [p.id, p.nome])));
+}
+
+/**
+ * Abastecimento EPRA e RTI do mês, com a mesma regra de férias da faxina.
+ * Vazio antes de novembro de 2026, quando a escala começa.
+ */
+export async function montarEscalaAbastecimento(
+  anoMes: AnoMes,
+  planta: EscalaDoMes | null = null,
+): Promise<CelulaFaxina[]> {
+  const [ferias, pessoas] = await Promise.all([
+    coberturasNoMes(anoMes),
+    planta ? Promise.resolve(planta.pessoas) : listarPessoasAtivas(),
+  ]);
+  return montarAbastecimento(anoMes, ferias, new Map(pessoas.map((p) => [p.id, p.nome])));
 }
 
 /** Férias com ferista que tocam o mês: a cobertura vale para o mês inteiro. */

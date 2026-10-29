@@ -164,6 +164,18 @@ WC's do térreo → vestiário. `MES_BASE_FAXINA` (outubro de 2026) é o mês da
 posição de partida em `RODIZIO_BASE_FAXINA`. A faxina aparece na escala do mês e
 na folha impressa do plantão.
 
+### Abastecimento
+
+`src/lib/abastecimento.ts`. Uma pessoa por mês para o EPRA e uma para o RTI,
+a partir de novembro de 2026, voltando ao primeiro nome depois do último:
+
+- **EPRA:** Fernando → Massen → Montanaro → Serra → Catia
+- **RTI:** Serra → Montanaro → Massen → Catia → Fernando
+
+Antes de novembro de 2026 a seção não aparece. Quem está de férias com ferista
+é coberto pelo ferista, como na faxina. Aparece na escala do mês e na folha
+impressa, junto da faxina.
+
 ### Observações de produção
 
 - O app não tem autenticação: quem tiver a URL edita a escala.
