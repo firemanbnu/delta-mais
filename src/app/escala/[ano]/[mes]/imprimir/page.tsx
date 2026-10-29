@@ -66,7 +66,7 @@ export default async function PaginaImprimir({
   const caminho = `/escala/${anoNum}/${String(mesNum).padStart(2, "0")}`;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="folha-impressao mx-auto max-w-6xl px-4 py-6">
       <div className="sem-impressao mb-6 flex flex-wrap items-center justify-between gap-4">
         <BotaoLink variant="ghost" size="sm" href={caminho}>
           <ArrowLeft data-icon="inline-start" />
@@ -239,17 +239,6 @@ key={paraISO(dia)}
             </p>
           ) : null}
         </section>
-
-        <section className="mt-10 grid grid-cols-2 gap-8 text-xs">
-          <div>
-            <p className="mb-6">Responsável pela escala</p>
-            <div className="border-t border-black pt-1">Nome e assinatura</div>
-          </div>
-          <div>
-            <p className="mb-6">Comandante do plantão</p>
-            <div className="border-t border-black pt-1">Nome e assinatura</div>
-          </div>
-        </section>
       </article>
 
       {radio && radio.noites.length > 0 ? (
@@ -311,17 +300,6 @@ key={paraISO(dia)}
               ))}
             </tbody>
           </table>
-
-          <section className="mt-8 grid grid-cols-2 gap-8 text-xs">
-            <div>
-              <p className="mb-6">Responsável pela escala de rádio</p>
-              <div className="border-t border-black pt-1">Nome e assinatura</div>
-            </div>
-            <div>
-              <p className="mb-6">Coordenador da comunicação</p>
-              <div className="border-t border-black pt-1">Nome e assinatura</div>
-            </div>
-          </section>
         </article>
       ) : null}
     </div>
