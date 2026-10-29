@@ -230,10 +230,13 @@ key={paraISO(dia)}
           {[...faxina, ...abastecimento].some((celula) => celula.cobertura) ? (
             <p className="mt-1 text-xs">
               * ferista:{" "}
-              {[...faxina, ...abastecimento]
-                .filter((celula) => celula.cobertura)
-                .map((celula) => `${celula.cobertura?.nome} no lugar de ${celula.nome}`)
-                .join("; ")}
+              {[
+                ...new Set(
+                  [...faxina, ...abastecimento]
+                    .filter((celula) => celula.cobertura)
+                    .map((celula) => `${celula.cobertura?.nome} no lugar de ${celula.nome}`),
+                ),
+              ].join("; ")}
             </p>
           ) : null}
         </section>
