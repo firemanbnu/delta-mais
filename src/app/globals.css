@@ -151,6 +151,12 @@
     border-color: #999 !important;
   }
 
+  /* Sem isto o navegador corta os fundos na impressão e as noites pintadas somem. */
+  .impressao {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   /* A grade de rádio é larga e não cabe junto do plantão: vira outra folha. */
   .quebra-folha {
     break-before: page;
