@@ -6,9 +6,18 @@ const DESTAQUE: Record<string, string> = {
   lixo: "border-red-500/70",
 };
 
-export function GradeFaxina({ celulas }: { celulas: CelulaFaxina[] }) {
+export function GradeFaxina({
+  celulas,
+  colunas = 5,
+}: {
+  celulas: CelulaFaxina[];
+  /** Colunas na tela larga; a faxina usa 5, o abastecimento 2. */
+  colunas?: 2 | 5;
+}) {
   return (
-    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+    <ul
+      className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${colunas === 5 ? "lg:grid-cols-5" : ""}`}
+    >
       {celulas.map((celula) => (
         <li
           key={celula.local.id}

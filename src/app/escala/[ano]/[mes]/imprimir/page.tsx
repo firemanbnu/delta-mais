@@ -7,6 +7,7 @@ import {
   buscarPeriodo,
   lerConfiguracoes,
   montarEscala,
+  montarEscalaAbastecimento,
   montarEscalaFaxina,
   montarEscalaRadio,
   semearOperadoresRadio,
@@ -49,9 +50,10 @@ export default async function PaginaImprimir({
   ]);
   if (!escala) notFound();
 
-  const [radio, faxina] = await Promise.all([
+  const [radio, faxina, abastecimento] = await Promise.all([
     montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala),
     montarEscalaFaxina({ ano: anoNum, mes: mesNum }, escala),
+    montarEscalaAbastecimento({ ano: anoNum, mes: mesNum }, escala),
   ]);
 
   const nomesPorId = new Map(escala.pessoas.map((p) => [p.id, p]));
@@ -204,10 +206,14 @@ key={paraISO(dia)}
         </section>
 
         <section className="mt-6">
-          <h2 className="text-sm font-bold uppercase">Faxina</h2>
+          <h2 className="text-sm font-bold uppercase">
+            Faxina{abastecimento.length > 0 ? " e abastecimento" : ""}
+          </h2>
           <table className="mt-2 w-full table-fixed border-collapse text-xs">
             <tbody>
-              {[faxina.slice(0, 5), faxina.slice(5)].map((linha, indice) => (
+              {[faxina.slice(0, 5), faxina.slice(5), abastecimento]
+                .filter((linha) => linha.length > 0)
+                .map((linha, indice) => (
                 <tr key={indice}>
                   {linha.map((celula) => (
                     <td key={celula.local.id} className="border border-black px-1 py-1 align-top">
@@ -221,13 +227,16 @@ key={paraISO(dia)}
               ))}
             </tbody>
           </table>
-          {faxina.some((celula) => celula.cobertura) ? (
+          {[...faxina, ...abastecimento].some((celula) => celula.cobertura) ? (
             <p className="mt-1 text-xs">
               * ferista:{" "}
-              {faxina
-                .filter((celula) => celula.cobertura)
-                .map((celula) => `${celula.cobertura?.nome} no lugar de ${celula.nome}`)
-                .join("; ")}
+              {[
+                ...new Set(
+                  [...faxina, ...abastecimento]
+                    .filter((celula) => celula.cobertura)
+                    .map((celula) => `${celula.cobertura?.nome} no lugar de ${celula.nome}`),
+                ),
+              ].join("; ")}
             </p>
           ) : null}
         </section>

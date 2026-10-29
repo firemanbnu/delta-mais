@@ -32,6 +32,7 @@ import {
   lerConfiguracoes,
   listarPeriodos,
   montarEscala,
+  montarEscalaAbastecimento,
   montarEscalaFaxina,
   montarEscalaRadio,
   semearOperadoresRadio,
@@ -77,9 +78,10 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
   const escala = await montarEscala({ ano: anoNum, mes: mesNum });
   if (!escala) notFound();
 
-  const [radio, faxina] = await Promise.all([
+  const [radio, faxina, abastecimento] = await Promise.all([
     montarEscalaRadio({ ano: anoNum, mes: mesNum }, escala),
     montarEscalaFaxina({ ano: anoNum, mes: mesNum }, escala),
+    montarEscalaAbastecimento({ ano: anoNum, mes: mesNum }, escala),
   ]);
 
   const anterior = await PeriodoAnterior({ ano: anoNum, mes: mesNum });
@@ -384,6 +386,18 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           <GradeFaxina celulas={faxina} />
         </div>
       </section>
+
+      {abastecimento.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="font-semibold">Abastecimento</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Uma pessoa por mês para o EPRA e uma para o RTI, em rodízio desde novembro de 2026.
+          </p>
+          <div className="mt-3 sm:max-w-2xl">
+            <GradeFaxina celulas={abastecimento} colunas={2} />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
