@@ -10,7 +10,7 @@ function porLocal(anoMes: { ano: number; mes: number }) {
 
 describe("escala de abastecimento", () => {
   it("começa em novembro de 2026 com Fernando no EPRA e Serra no RTI", () => {
-    expect(porLocal({ ano: 2026, mes: 11 })).toEqual({ epra: "Fernando", rti: "Serra" });
+    expect(porLocal({ ano: 2026, mes: 11 })).toEqual({ epra: "FERNANDO", rti: "SERRA" });
   });
 
   it("segue a ordem de cada lista, um nome por mês", () => {

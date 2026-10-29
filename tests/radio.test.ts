@@ -40,8 +40,8 @@ const CONFIG: ConfigRadio = {
 
 const OUTUBRO = { ano: 2026, mes: 10 };
 
-const ANEL_1 = ["Vanzella", "Fernando", "Catia", "Serra"];
-const ANEL_2 = ["Massen", "Douglas", "Ataide", "Montanaro"];
+const ANEL_1 = ["VANZELLA", "FERNANDO", "CATIA", "SERRA"];
+const ANEL_2 = ["MASSEN", "DOUGLAS", "ATAIDE", "MONTANARO"];
 
 /** Ids fictícios na ordem dos anéis: 1..4 no anel 1, 5..8 no anel 2. */
 const ANEIS: AneisRadio = { 1: ["1", "2", "3", "4"], 2: ["5", "6", "7", "8"] };
@@ -408,7 +408,7 @@ describe("escala de rádio no banco", () => {
   it("troca as posições dos dois operadores da noite", async () => {
     await preencherMes(OUTUBRO, ids);
     const antes = exigir(await montarEscalaRadio(OUTUBRO));
-    const alvo = (await listarOperadoresRadio()).find((o) => o.nome === "Massen")!;
+    const alvo = (await listarOperadoresRadio()).find((o) => o.nome === "MASSEN")!;
 
     await definirOperadorRadioNoite(OUTUBRO, "2026-10-02", "21-22", Number(alvo.id));
     const trocada = exigir(await montarEscalaRadio(OUTUBRO));
@@ -433,8 +433,8 @@ describe("escala de rádio no banco", () => {
   it("aceita trocas de pessoas diferentes na mesma noite", async () => {
     await preencherMes(OUTUBRO, ids);
     const operadores = await listarOperadoresRadio();
-    const primeira = operadores.find((o) => o.nome === "Massen")!;
-    const segunda = operadores.find((o) => o.nome === "Ataide")!;
+    const primeira = operadores.find((o) => o.nome === "MASSEN")!;
+    const segunda = operadores.find((o) => o.nome === "ATAIDE")!;
 
     await definirOperadorRadioNoite(OUTUBRO, "2026-10-02", "21-22", Number(primeira.id));
     await definirOperadorRadioNoite(OUTUBRO, "2026-10-02", "23-00", Number(segunda.id));
@@ -452,7 +452,7 @@ describe("escala de rádio no banco", () => {
   it("restaura o mês inteiro ao rodízio", async () => {
     await preencherMes(OUTUBRO, ids);
     const antes = exigir(await montarEscalaRadio(OUTUBRO));
-    const alvo = (await listarOperadoresRadio()).find((o) => o.nome === "Massen")!;
+    const alvo = (await listarOperadoresRadio()).find((o) => o.nome === "MASSEN")!;
 
     await definirOperadorRadioNoite(OUTUBRO, "2026-10-02", "21-22", Number(alvo.id));
     await definirOperadorRadioNoite(OUTUBRO, "2026-10-04", "22-23", Number(alvo.id));
@@ -492,7 +492,7 @@ describe("escala de rádio no banco", () => {
 
   it("trata escolher quem já está na faixa como devolver ao rodízio", async () => {
     await preencherMes(OUTUBRO, ids);
-    const alvo = (await listarOperadoresRadio()).find((o) => o.nome === "Fernando")!;
+    const alvo = (await listarOperadoresRadio()).find((o) => o.nome === "FERNANDO")!;
     const automatico = exigir(await montarEscalaRadio(OUTUBRO));
 
     await definirOperadorRadioNoite(OUTUBRO, "2026-10-02", "21-22", Number(alvo.id));

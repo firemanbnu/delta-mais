@@ -148,6 +148,8 @@ export function GestaoAusencias({
                     value={ferista}
                     onChange={(evento) => setFerista(evento.target.value)}
                     maxLength={80}
+                    className="uppercase"
+                    autoCapitalize="characters"
                   />
                 </div>
 

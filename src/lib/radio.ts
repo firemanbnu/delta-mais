@@ -373,14 +373,14 @@ export const OPERADORES_RADIO_PADRAO: readonly {
   anel: 1 | 2;
   ordem: number;
 }[] = [
-  { nome: "Vanzella", anel: 1, ordem: 0 },
-  { nome: "Fernando", anel: 1, ordem: 1 },
-  { nome: "Catia", anel: 1, ordem: 2 },
-  { nome: "Serra", anel: 1, ordem: 3 },
-  { nome: "Massen", anel: 2, ordem: 0 },
-  { nome: "Douglas", anel: 2, ordem: 1 },
-  { nome: "Ataide", anel: 2, ordem: 2 },
-  { nome: "Montanaro", anel: 2, ordem: 3 },
+  { nome: "VANZELLA", anel: 1, ordem: 0 },
+  { nome: "FERNANDO", anel: 1, ordem: 1 },
+  { nome: "CATIA", anel: 1, ordem: 2 },
+  { nome: "SERRA", anel: 1, ordem: 3 },
+  { nome: "MASSEN", anel: 2, ordem: 0 },
+  { nome: "DOUGLAS", anel: 2, ordem: 1 },
+  { nome: "ATAIDE", anel: 2, ordem: 2 },
+  { nome: "MONTANARO", anel: 2, ordem: 3 },
 ];
 
 export const TIME_RADIO = "Equipe de Rádio";

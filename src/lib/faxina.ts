@@ -39,10 +39,10 @@ export const LOCAIS_FAXINA: readonly LocalFaxina[] = [
 
 /** Quem nunca sai do local. */
 export const FIXOS_FAXINA: Record<string, string> = {
-  cozinha: "Ataide",
-  comunicacao: "Catia",
-  lideranca: "Alexandre",
-  lixo: "Adalto",
+  cozinha: "ATAIDE",
+  comunicacao: "CATIA",
+  lideranca: "ALEXANDRE",
+  lixo: "ADALTO",
 };
 
 /** Mês em que o rodízio está na posição de partida abaixo. */
@@ -50,12 +50,12 @@ export const MES_BASE_FAXINA: AnoMes = { ano: 2026, mes: 10 };
 
 /** Quem está em cada posição do rodízio no mês base (0 = vestiário). */
 export const RODIZIO_BASE_FAXINA: readonly string[] = [
-  "Massen",
-  "Serra",
-  "Fernando",
-  "Douglas",
-  "Montanaro",
-  "Vanzella",
+  "MASSEN",
+  "SERRA",
+  "FERNANDO",
+  "DOUGLAS",
+  "MONTANARO",
+  "VANZELLA",
 ];
 
 export type CelulaFaxina = {

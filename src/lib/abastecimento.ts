@@ -20,11 +20,11 @@ export const MES_BASE_ABASTECIMENTO: AnoMes = { ano: 2026, mes: 11 };
 export const RODIZIOS_ABASTECIMENTO: readonly RodizioAbastecimento[] = [
   {
     local: { id: "epra", rotulo: "Abastecimento EPRA", posicaoNoRodizio: 0 },
-    ordem: ["Fernando", "Massen", "Montanaro", "Serra", "Catia"],
+    ordem: ["FERNANDO", "MASSEN", "MONTANARO", "SERRA", "CATIA"],
   },
   {
     local: { id: "rti", rotulo: "Abastecimento RTI", posicaoNoRodizio: 0 },
-    ordem: ["Serra", "Montanaro", "Massen", "Catia", "Fernando"],
+    ordem: ["SERRA", "MONTANARO", "MASSEN", "CATIA", "FERNANDO"],
   },
 ];
 

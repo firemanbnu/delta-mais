@@ -1,3 +1,11 @@
+/**
+ * Nomes de pessoas são sempre gravados e mostrados em letras maiúsculas,
+ * com espaços repetidos reduzidos a um.
+ */
+export function nomeEmMaiusculas(nome: string): string {
+  return nome.replace(/\s+/g, " ").trim().toLocaleUpperCase("pt-BR");
+}
+
 export const FUNCOES = ["CE", "LR", "MC", "BA", "RE", "RADIO"] as const;
 export type Funcao = (typeof FUNCOES)[number];
 
