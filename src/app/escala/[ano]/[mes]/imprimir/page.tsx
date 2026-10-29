@@ -242,7 +242,7 @@ key={paraISO(dia)}
       </article>
 
       {radio && radio.noites.length > 0 ? (
-        <article className="impressao quebra-folha mx-auto mt-6 max-w-6xl rounded-xl border bg-white p-8 text-black">
+        <article className="impressao mx-auto mt-6 max-w-6xl rounded-xl border bg-white p-8 text-black">
           <header className="border-b-2 border-black pb-3">
             <h1 className="text-xl font-bold uppercase tracking-wide">Escala de Rádio</h1>
             <p className="mt-1 text-sm">

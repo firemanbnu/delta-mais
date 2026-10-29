@@ -135,7 +135,7 @@
   margin: 10mm;
 }
 
-/* Folha A4 com margem fixa: o plantão sai na primeira página e o rádio na segunda. */
+/* Folha A4 retrato com margem fixa: plantão e rádio cabem juntos numa página só. */
 @page {
   size: A4 portrait;
   margin: 10mm;
@@ -159,6 +159,11 @@
     page-break-inside: avoid;
   }
 
+  /* Espaço entre o plantão e a escala de rádio, que vem logo abaixo. */
+  .folha-impressao .impressao + .impressao {
+    margin-top: 6mm !important;
+  }
+
   .sem-impressao {
     display: none !important;
   }
@@ -178,11 +183,5 @@
   .impressao {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-
-  /* A grade de rádio é larga e não cabe junto do plantão: vira outra folha. */
-  .quebra-folha {
-    break-before: page;
-    page-break-before: always;
   }
 }
