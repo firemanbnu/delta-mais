@@ -10,33 +10,33 @@ function porLocal(celulas: ReturnType<typeof montarFaxina>) {
 describe("escala de faxina", () => {
   it("reproduz a escala de outubro de 2026", () => {
     expect(porLocal(montarFaxina({ ano: 2026, mes: 10 }))).toEqual({
-      cozinha: "Ataide",
-      comunicacao: "Catia",
-      vestiario: "Massen",
-      corredores: "Serra",
-      garagem: "Fernando",
-      auditorio: "Douglas",
-      alojamento: "Montanaro",
-      "wc-terreo": "Vanzella",
-      lideranca: "Alexandre",
-      lixo: "Adalto",
+      cozinha: "ATAIDE",
+      comunicacao: "CATIA",
+      vestiario: "MASSEN",
+      corredores: "SERRA",
+      garagem: "FERNANDO",
+      auditorio: "DOUGLAS",
+      alojamento: "MONTANARO",
+      "wc-terreo": "VANZELLA",
+      lideranca: "ALEXANDRE",
+      lixo: "ADALTO",
     });
   });
 
   it("gira uma posição por mês e mantém os fixos", () => {
     const novembro = porLocal(montarFaxina({ ano: 2026, mes: 11 }));
-    expect(novembro.corredores).toBe("Massen");
-    expect(novembro.garagem).toBe("Serra");
-    expect(novembro.vestiario).toBe("Vanzella");
-    expect(novembro.cozinha).toBe("Ataide");
-    expect(novembro.lixo).toBe("Adalto");
+    expect(novembro.corredores).toBe("MASSEN");
+    expect(novembro.garagem).toBe("SERRA");
+    expect(novembro.vestiario).toBe("VANZELLA");
+    expect(novembro.cozinha).toBe("ATAIDE");
+    expect(novembro.lixo).toBe("ADALTO");
   });
 
   it("volta à posição de partida depois de seis meses, também para trás", () => {
     expect(porLocal(montarFaxina({ ano: 2027, mes: 4 }))).toEqual(
       porLocal(montarFaxina({ ano: 2026, mes: 10 })),
     );
-    expect(porLocal(montarFaxina({ ano: 2026, mes: 9 })).vestiario).toBe("Serra");
+    expect(porLocal(montarFaxina({ ano: 2026, mes: 9 })).vestiario).toBe("SERRA");
   });
 
   it("põe o ferista no lugar de quem está de férias", () => {
@@ -47,7 +47,7 @@ describe("escala de faxina", () => {
     );
     const terreo = celulas.find((c) => c.local.id === "wc-terreo");
 
-    expect(terreo?.nome).toBe("Vanzella");
+    expect(terreo?.nome).toBe("VANZELLA");
     expect(terreo?.cobertura?.nome).toBe("Pedro");
     expect(celulas.filter((c) => c.cobertura)).toHaveLength(1);
   });

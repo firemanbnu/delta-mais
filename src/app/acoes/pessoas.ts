@@ -8,12 +8,12 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { garantirTimePadrao, listarPessoas } from "@/db/repositorio";
 import { people } from "@/db/schema";
-import { FUNCOES } from "@/lib/dominio";
+import { FUNCOES, nomeEmMaiusculas } from "@/lib/dominio";
 import type { Resultado } from "./escala";
 
 const pessoaSchema = z.object({
   id: z.coerce.number().int().positive().optional(),
-  nome: z.string().trim().min(2, "Informe o nome completo."),
+  nome: z.string().trim().min(2, "Informe o nome completo.").transform(nomeEmMaiusculas),
   matricula: z.string().trim().optional(),
   funcao: z.enum(FUNCOES),
   telefone: z.string().trim().optional(),

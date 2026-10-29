@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { getDb } from "@/db";
 import { absences } from "@/db/schema";
-import { ROTULOS_AUSENCIA, TIPOS_AUSENCIA } from "@/lib/dominio";
+import { ROTULOS_AUSENCIA, TIPOS_AUSENCIA, nomeEmMaiusculas } from "@/lib/dominio";
 import type { Resultado } from "./escala";
 
 function ok(mensagem: string): Resultado {
@@ -29,7 +29,12 @@ const ausenciaSchema = z
     inicio: z.coerce.date("Informe a data de início."),
     fim: z.coerce.date("Informe a data de término."),
     tipo: z.enum(TIPOS_AUSENCIA),
-    ferista: z.string().trim().max(80, "Nome do ferista muito longo.").optional(),
+    ferista: z
+      .string()
+      .trim()
+      .max(80, "Nome do ferista muito longo.")
+      .transform(nomeEmMaiusculas)
+      .optional(),
     cobreFuncaoId: z.coerce.number().int().positive().optional(),
     observacoes: z.string().trim().optional(),
   })

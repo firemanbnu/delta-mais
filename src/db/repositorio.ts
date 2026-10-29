@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { getDb } from "./index";
-import { POSTOS_PADRAO, type Funcao, type NoiteDeServico } from "@/lib/dominio";
+import { POSTOS_PADRAO, nomeEmMaiusculas, type Funcao, type NoiteDeServico } from "@/lib/dominio";
 import { chaveAnoMes, formatarDataBR, paraISO, rotuloMes, type AnoMes } from "@/lib/calendario";
 import {
   avancarRodizio,
@@ -301,7 +301,7 @@ export async function coberturasNoMes(anoMes: AnoMes): Promise<CoberturaFerias[]
     .map((linha) => ({
       ausenciaId: String(linha.id),
       pessoaId: String(linha.pessoaId),
-      ferista: linha.ferista ?? "",
+      ferista: nomeEmMaiusculas(linha.ferista ?? ""),
       cobreFuncaoId: linha.cobreFuncaoId === null ? null : String(linha.cobreFuncaoId),
     }));
 }

@@ -217,7 +217,14 @@ function DialogoPessoa({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="nome">Nome completo</Label>
-              <Input id="nome" name="nome" defaultValue={pessoa?.nome ?? ""} required />
+              <Input
+                id="nome"
+                name="nome"
+                defaultValue={pessoa?.nome ?? ""}
+                required
+                className="uppercase"
+                autoCapitalize="characters"
+              />
             </div>
 
             <div className="flex flex-col gap-2">
