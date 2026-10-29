@@ -135,7 +135,30 @@
   margin: 10mm;
 }
 
+/* Folha A4 com margem fixa: o plantão sai na primeira página e o rádio na segunda. */
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
 @media print {
+  /* Na impressão a folha usa a página inteira, sem o espaço da tela. */
+  .folha-impressao {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .folha-impressao .impressao {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   .sem-impressao {
     display: none !important;
   }
