@@ -49,7 +49,6 @@ import {
   paraISO,
   rotuloMesCurto,
 } from "@/lib/calendario";
-import { resumoDaRegra } from "@/lib/radio";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Escala do mês" };
@@ -327,7 +326,6 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="font-semibold">Escala de rádio</h2>
-              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{resumoDaRegra()}</p>
             </div>
 
             <div className="sem-impressao flex flex-wrap items-center gap-2">

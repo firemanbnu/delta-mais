@@ -70,7 +70,7 @@ export function GradeRadio({
                   <TableCell className="align-top">
                     <span className="block font-mono text-xs">{formatarDataBR(noite.data)}</span>
                     <span className="block text-[10px] uppercase text-muted-foreground">
-                      {DIAS_SEMANA[dia.getDay()]} · noite {noite.indice}
+                      {DIAS_SEMANA[dia.getDay()]}
                     </span>
                   </TableCell>
 

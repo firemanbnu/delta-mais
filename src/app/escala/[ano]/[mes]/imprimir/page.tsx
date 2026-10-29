@@ -23,7 +23,7 @@ import {
   paraISO,
   rotuloMesCurto,
 } from "@/lib/calendario";
-import { SLOTS_RADIO, resumoDaRegra } from "@/lib/radio";
+import { SLOTS_RADIO } from "@/lib/radio";
 
 export const dynamic = "force-dynamic";
 
@@ -194,14 +194,13 @@ key={paraISO(dia)}
                         : "text-neutral-400"
                     }`}
                   >
-                    {ehNoiteDeServico(dia, config.dataAncora, config.noiteDeServico) ? "●" : "○"}
                   </td>
                 ))}
               </tr>
             </tbody>
           </table>
 <p className="mt-2 text-xs">
-            ● noite de serviço ({inicio} às {fim}) · a equipe folga nas noites marcadas com ○
+            Noites pintadas: equipe de serviço ({inicio} às {fim}). Nas demais, a equipe folga.
           </p>
         </section>
 
@@ -264,8 +263,6 @@ key={paraISO(dia)}
             </p>
           </header>
 
-          <p className="mt-2 text-xs">{resumoDaRegra()}</p>
-
           <table className="mt-3 w-full border-collapse text-[9px]">
             <thead>
               <tr>
@@ -282,7 +279,6 @@ key={paraISO(dia)}
                 <tr key={noite.data}>
                   <td className="border border-black px-1 py-0.5 font-mono">
                     {formatarDataBR(noite.data)}
-                    <span className="block text-[8px]">nº {noite.indice}</span>
                   </td>
                   {SLOTS_RADIO.map((slot) => {
                     if (slot.bloco === "FIXO") {
@@ -315,11 +311,6 @@ key={paraISO(dia)}
               ))}
             </tbody>
           </table>
-
-          <p className="mt-2 text-xs">
-            Célula cinza: troca manual. Nome com *: ferista cobrindo férias. A entrada e a saída
-            da central (19:00 e 06:00) ficam com o bombeiro escalado no F3-BA2.
-          </p>
 
           <section className="mt-8 grid grid-cols-2 gap-8 text-xs">
             <div>
