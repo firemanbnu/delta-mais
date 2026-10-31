@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 
 /** Largura da folha A4 em pé a 96 dpi; a imagem sai igual em qualquer tela. */
 const LARGURA_A4 = 794;
+/** Margem lateral da folha na imagem (10 mm), igual ao padding de `.modo-imagem`. */
+const MARGEM = 38;
+
+/** Pausa curta para o navegador recalcular o layout; funciona com a aba em segundo plano. */
+function esperar() {
+  return new Promise((r) => setTimeout(r, 80));
+}
 
 function baixar(arquivo: File) {
   const url = URL.createObjectURL(arquivo);
@@ -45,13 +52,19 @@ export function BotaoImagemEscala({
     setGerando(true);
     alvo.classList.add("modo-imagem");
     try {
-      // Espera o navegador redesenhar a folha na largura da A4.
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      // Dá tempo de o navegador refazer o layout na largura da A4.
+      await esperar();
+      // A tabela das noites (31 colunas) pode passar da A4: a imagem alarga
+      // até caber tudo, com a mesma margem dos dois lados.
+      const largura = Math.max(LARGURA_A4, alvo.scrollWidth + MARGEM);
+      alvo.style.setProperty("width", `${largura}px`, "important");
+      await esperar();
       const { toBlob } = await import("html-to-image");
       const blob = await toBlob(alvo, {
         pixelRatio: 2,
         backgroundColor: "#ffffff",
-        width: LARGURA_A4,
+        width: largura,
+        height: alvo.scrollHeight,
         filter: (no) => !(no instanceof HTMLElement && no.classList.contains("sem-impressao")),
       });
       if (!blob) throw new Error("A imagem saiu vazia.");
@@ -62,6 +75,7 @@ export function BotaoImagemEscala({
       toast.error("Não foi possível gerar a imagem. Tente de novo.");
     } finally {
       alvo.classList.remove("modo-imagem");
+      alvo.style.removeProperty("width");
       setGerando(false);
     }
   }
