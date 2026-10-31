@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
+import { SeletorLayoutRadio } from "@/components/radio/seletor-layout-radio";
 import { BotaoLink } from "@/components/ui/link-button";
 import {
   buscarPeriodo,
@@ -11,6 +12,7 @@ import {
   montarEscalaFaxina,
   montarEscalaRadio,
   semearOperadoresRadio,
+  type EscalaRadio,
   semearPostos,
 } from "@/db/repositorio";
 import { ROTULO_UNIDADE, type Unidade } from "@/lib/dominio";
@@ -23,7 +25,7 @@ import {
   paraISO,
   rotuloMesCurto,
 } from "@/lib/calendario";
-import { SLOTS_RADIO } from "@/lib/radio";
+import { SLOTS_RADIO, layoutRadioDe, type NoiteDeRadio, type SlotRadio } from "@/lib/radio";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +33,10 @@ export const metadata = { title: "Imprimir escala" };
 
 export default async function PaginaImprimir({
   params,
+  searchParams,
 }: PageProps<"/escala/[ano]/[mes]/imprimir">) {
   const { ano, mes } = await params;
+  const layoutRadio = layoutRadioDe((await searchParams).radio);
   const anoNum = Number(ano);
   const mesNum = Number(mes);
 
@@ -72,7 +76,10 @@ export default async function PaginaImprimir({
           <ArrowLeft data-icon="inline-start" />
           Voltar para a escala
         </BotaoLink>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {radio && radio.noites.length > 0 ? (
+            <SeletorLayoutRadio caminho={`${caminho}/imprimir`} atual={layoutRadio} />
+          ) : null}
           {radio && radio.noites.length > 0 ? (
             <BotaoLink variant="outline" size="sm" href={`${caminho}/exportar/radio`}>
               <Download data-icon="inline-start" />
@@ -89,7 +96,7 @@ export default async function PaginaImprimir({
 
       <p className="sem-impressao mb-4 text-sm text-muted-foreground">
         Para gerar o arquivo, escolha <strong>Salvar como PDF</strong> como destino da impressão. A
-        folha sai em A4 paisagem.
+        folha sai numa página A4 em pé.
       </p>
 
       <article className="impressao rounded-xl border bg-white p-8 text-black">
@@ -252,56 +259,112 @@ key={paraISO(dia)}
             </p>
           </header>
 
-          <table className="mt-3 w-full border-collapse text-[9px]">
-            <thead>
-              <tr>
-                <th className="w-16 border border-black px-1 py-0.5 text-left font-bold">Noite</th>
-                {SLOTS_RADIO.map((slot) => (
-                  <th key={slot.id} className="border border-black px-0.5 py-0.5 font-normal">
-                    {slot.inicio}
+          {layoutRadio === "vertical" ? (
+            <table className="mt-3 w-full table-fixed border-collapse text-[8px] leading-tight">
+              <thead>
+                <tr>
+                  <th className="w-[9mm] border border-black px-px py-0.5 text-left font-bold">
+                    Horário
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {radio.noites.map((noite) => (
-                <tr key={noite.data}>
-                  <td className="border border-black px-1 py-0.5 font-mono">
-                    {formatarDataBR(noite.data)}
-                  </td>
-                  {SLOTS_RADIO.map((slot) => {
-                    if (slot.bloco === "FIXO") {
-                      return (
-                        <td
-                          key={slot.id}
-                          className="border border-black bg-neutral-100 px-0.5 py-0.5 text-center font-semibold"
-                        >
-                          {radio.comunicacao?.nome ?? "—"}
-                        </td>
-                      );
-                    }
-                    const celula = noite.slots[slot.id];
-                    return (
-                      <td
-                        key={slot.id}
-                        className={`border border-black px-0.5 py-0.5 ${
-                          celula?.origem === "MANUAL" ? "bg-neutral-200 font-semibold" : ""
-                        } ${celula?.cobertura ? "italic" : ""}`}
-                      >
-                        {celula
-                          ? celula.cobertura
-                            ? `${celula.cobertura.nome}*`
-                            : (radio.nomesPorId[celula.pessoaId] ?? "—")
-                          : "—"}
-                      </td>
-                    );
-                  })}
+                  {radio.noites.map((noite) => (
+                    <th key={noite.data} className="border border-black px-px py-0.5 font-normal">
+                      <span className="block font-bold">{formatarDataBR(noite.data).slice(0, 5)}</span>
+                      {DIAS_SEMANA_CURTO[new Date(`${noite.data}T12:00:00`).getDay()]}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {SLOTS_RADIO.map((slot, indice) => (
+                  <tr key={slot.id} className={faixaImpressa(indice)}>
+                    <td className="border border-black px-px py-0.5 font-mono">
+                      {slot.inicio}
+                      <br />
+                      {slot.fim}
+                    </td>
+                    {radio.noites.map((noite) => (
+                      <CelulaImpressaRadio
+                        key={noite.data}
+                        noite={noite}
+                        slot={slot}
+                        radio={radio}
+                        compacta
+                      />
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="mt-3 w-full border-collapse text-[9px]">
+              <thead>
+                <tr>
+                  <th className="w-16 border border-black px-1 py-0.5 text-left font-bold">Noite</th>
+                  {SLOTS_RADIO.map((slot) => (
+                    <th key={slot.id} className="border border-black px-0.5 py-0.5 font-normal">
+                      {slot.inicio}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {radio.noites.map((noite, indice) => (
+                  <tr key={noite.data} className={faixaImpressa(indice)}>
+                    <td className="border border-black px-1 py-0.5 font-mono">
+                      {formatarDataBR(noite.data)}
+                    </td>
+                    {SLOTS_RADIO.map((slot) => (
+                      <CelulaImpressaRadio key={slot.id} noite={noite} slot={slot} radio={radio} />
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </article>
       ) : null}
     </div>
+  );
+}
+
+/** Linhas alternadas na folha: uma branca, a seguinte laranja clarinho. */
+function faixaImpressa(indice: number): string {
+  return indice % 2 === 1 ? "bg-orange-100" : "bg-white";
+}
+
+/** Uma faixa de uma noite na folha impressa; igual nos dois modelos. */
+function CelulaImpressaRadio({
+  noite,
+  slot,
+  radio,
+  compacta = false,
+}: {
+  noite: NoiteDeRadio;
+  slot: SlotRadio;
+  radio: EscalaRadio;
+  /** Modelo vertical: colunas estreitas, sem espaço lateral e texto centralizado. */
+  compacta?: boolean;
+}) {
+  const base = `border border-black py-0.5 ${compacta ? "px-px text-center" : "px-0.5"}`;
+  if (slot.bloco === "FIXO") {
+    return (
+      <td className={`${base} text-center font-semibold`}>
+        {radio.comunicacao?.nome ?? "—"}
+      </td>
+    );
+  }
+  const celula = noite.slots[slot.id];
+  return (
+    <td
+      className={`${base} ${celula?.origem === "MANUAL" ? "font-semibold" : ""} ${
+        celula?.cobertura ? "italic" : ""
+      }`}
+    >
+      {celula
+        ? celula.cobertura
+          ? `${celula.cobertura.nome}*`
+          : (radio.nomesPorId[celula.pessoaId] ?? "—")
+        : "—"}
+    </td>
   );
 }
