@@ -263,11 +263,11 @@ key={paraISO(dia)}
             <table className="mt-3 w-full table-fixed border-collapse text-[8px] leading-tight">
               <thead>
                 <tr>
-                  <th className="w-[13mm] border border-black px-0.5 py-0.5 text-left font-bold">
+                  <th className="w-[9mm] border border-black px-px py-0.5 text-left font-bold">
                     Horário
                   </th>
                   {radio.noites.map((noite) => (
-                    <th key={noite.data} className="border border-black px-0.5 py-0.5 font-normal">
+                    <th key={noite.data} className="border border-black px-px py-0.5 font-normal">
                       <span className="block font-bold">{formatarDataBR(noite.data).slice(0, 5)}</span>
                       {DIAS_SEMANA_CURTO[new Date(`${noite.data}T12:00:00`).getDay()]}
                     </th>
@@ -277,8 +277,10 @@ key={paraISO(dia)}
               <tbody>
                 {SLOTS_RADIO.map((slot, indice) => (
                   <tr key={slot.id} className={faixaImpressa(indice)}>
-                    <td className="whitespace-nowrap border border-black px-0.5 py-0.5 font-mono">
-                      {slot.inicio}–{slot.fim}
+                    <td className="border border-black px-px py-0.5 font-mono">
+                      {slot.inicio}
+                      <br />
+                      {slot.fim}
                     </td>
                     {radio.noites.map((noite) => (
                       <CelulaImpressaRadio
@@ -286,7 +288,7 @@ key={paraISO(dia)}
                         noite={noite}
                         slot={slot}
                         radio={radio}
-                        className="break-all text-center"
+                        compacta
                       />
                     ))}
                   </tr>
@@ -335,16 +337,18 @@ function CelulaImpressaRadio({
   noite,
   slot,
   radio,
-  className = "",
+  compacta = false,
 }: {
   noite: NoiteDeRadio;
   slot: SlotRadio;
   radio: EscalaRadio;
-  className?: string;
+  /** Modelo vertical: colunas estreitas, sem espaço lateral e texto centralizado. */
+  compacta?: boolean;
 }) {
+  const base = `border border-black py-0.5 ${compacta ? "px-px text-center" : "px-0.5"}`;
   if (slot.bloco === "FIXO") {
     return (
-      <td className={`border border-black px-0.5 py-0.5 text-center font-semibold ${className}`}>
+      <td className={`${base} text-center font-semibold`}>
         {radio.comunicacao?.nome ?? "—"}
       </td>
     );
@@ -352,9 +356,9 @@ function CelulaImpressaRadio({
   const celula = noite.slots[slot.id];
   return (
     <td
-      className={`border border-black px-0.5 py-0.5 ${
-        celula?.origem === "MANUAL" ? "font-semibold" : ""
-      } ${celula?.cobertura ? "italic" : ""} ${className}`}
+      className={`${base} ${celula?.origem === "MANUAL" ? "font-semibold" : ""} ${
+        celula?.cobertura ? "italic" : ""
+      }`}
     >
       {celula
         ? celula.cobertura
