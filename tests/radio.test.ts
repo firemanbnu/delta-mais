@@ -82,25 +82,22 @@ function nomesDaNoite(noite: { slots: Record<string, { pessoaId: string }> }): s
   });
 }
 
-/** Avança o anel `volta` posições, mantendo a ordem do rodízio. */
-function rotacionar(lista: readonly string[], volta: number): string[] {
-  return [...lista.slice(volta), ...lista.slice(0, volta)];
+/** Desce o anel `volta` faixas: o último da lista volta para a primeira faixa. */
+function descer(lista: readonly string[], volta: number): string[] {
+  const corte = lista.length - (volta % lista.length);
+  return [...lista.slice(corte), ...lista.slice(0, corte)];
 }
 
 /**
- * A série da escala de rádio de outubro/2026: a cada noite os anéis trocam de
- * turno e a cada duas noites avançam uma posição. 18/10 repete 02/10.
+ * A série da escala de rádio: a cada noite os anéis trocam de turno e todos
+ * descem uma faixa. 10/10 repete 02/10.
  */
 const SERIE_OUTUBRO = [
-  { noite: 0, a: rotacionar(ANEL_1, 0), b: rotacionar(ANEL_2, 0) },
-  { noite: 1, a: rotacionar(ANEL_2, 0), b: rotacionar(ANEL_1, 0) },
-  { noite: 2, a: rotacionar(ANEL_1, 1), b: rotacionar(ANEL_2, 1) },
-  { noite: 3, a: rotacionar(ANEL_2, 1), b: rotacionar(ANEL_1, 1) },
-  { noite: 4, a: rotacionar(ANEL_1, 2), b: rotacionar(ANEL_2, 2) },
-  { noite: 5, a: rotacionar(ANEL_2, 2), b: rotacionar(ANEL_1, 2) },
-  { noite: 6, a: rotacionar(ANEL_1, 3), b: rotacionar(ANEL_2, 3) },
-  { noite: 7, a: rotacionar(ANEL_2, 3), b: rotacionar(ANEL_1, 3) },
-  { noite: 8, a: rotacionar(ANEL_1, 0), b: rotacionar(ANEL_2, 0) },
+  { noite: 0, a: descer(ANEL_1, 0), b: descer(ANEL_2, 0) },
+  { noite: 1, a: descer(ANEL_2, 1), b: descer(ANEL_1, 1) },
+  { noite: 2, a: descer(ANEL_1, 2), b: descer(ANEL_2, 2) },
+  { noite: 3, a: descer(ANEL_2, 3), b: descer(ANEL_1, 3) },
+  { noite: 4, a: descer(ANEL_1, 0), b: descer(ANEL_2, 0) },
 ];
 
 describe("calendário do rádio", () => {
@@ -189,7 +186,7 @@ describe("rodízio dos anéis", () => {
     expect(SLOTS_FIXOS.map((slot) => slot.id)).toEqual(["19-20", "06-07"]);
   });
 
-  it("segue a série de outubro, com 18/10 repetindo 02/10", () => {
+  it("segue a série de outubro, com 10/10 repetindo 02/10", () => {
     const noites = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS);
 
     expect(noites).toHaveLength(15);
@@ -200,7 +197,7 @@ describe("rodízio dos anéis", () => {
       expect(nomesDaNoite(noite)).toEqual([...serie.a, ...serie.b]);
     }
 
-    expect(nomesDaNoite(noites[0])).toEqual(nomesDaNoite(noites[8]));
+    expect(nomesDaNoite(noites[0])).toEqual(nomesDaNoite(noites[4]));
   });
 
   it("começa com o anel 1 no primeiro turno e alterna a cada noite", () => {
@@ -209,26 +206,47 @@ describe("rodízio dos anéis", () => {
     expect(noites[0].anelUmNoTurnoA).toBe(true);
     expect(noites[1].anelUmNoTurnoA).toBe(false);
     expect(noites[0].slots["20-21"].pessoaId).toBe(ANEIS[1][0]);
-    expect(noites[1].slots["20-21"].pessoaId).toBe(ANEIS[2][0]);
-    expect(noites[1].slots["00-01:30"].pessoaId).toBe(ANEIS[1][0]);
+    // Na noite seguinte todos descem uma faixa: o último do anel abre o turno.
+    expect(noites[1].slots["20-21"].pessoaId).toBe(ANEIS[2][3]);
+    expect(noites[1].slots["21-22"].pessoaId).toBe(ANEIS[2][0]);
+    expect(noites[1].slots["01:30-03"].pessoaId).toBe(ANEIS[1][0]);
   });
 
-  it("avança os dois anéis uma posição a cada duas noites", () => {
+  it("desce os dois anéis uma faixa a cada noite", () => {
     const noites = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS);
 
-    expect(noites[0].volta).toBe(0);
-    expect(noites[1].volta).toBe(0);
-    expect(noites[2].volta).toBe(1);
-    expect(noites[3].volta).toBe(1);
-    expect(noites[4].volta).toBe(2);
+    expect(noites.slice(0, 5).map((noite) => noite.volta)).toEqual([0, 1, 2, 3, 0]);
   });
 
-  it("fecha o ciclo em oito noites", () => {
-    const primeira = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS)[0];
-    const depois = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS)[8];
+  it("fecha o ciclo em quatro noites", () => {
+    const noites = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS);
 
-    expect(depois.indice).toBe(primeira.indice + 8);
-    expect(nomesDaNoite(depois)).toEqual(nomesDaNoite(primeira));
+    expect(noites[4].indice).toBe(noites[0].indice + 4);
+    expect(nomesDaNoite(noites[4])).toEqual(nomesDaNoite(noites[0]));
+  });
+
+  it("monta novembro/2026 igual à escala da equipe", () => {
+    const [primeira, segunda] = montarGradeDoMes({ ano: 2026, mes: 11 }, CONFIG, ANEIS);
+
+    expect(primeira.data).toBe("2026-11-01");
+    expect(nomesDaNoite(primeira)).toEqual([
+      "DOUGLAS", "ATAIDE", "MONTANARO", "MASSEN",
+      "FERNANDO", "CATIA", "SERRA", "VANZELLA",
+    ]);
+    expect(segunda.data).toBe("2026-11-03");
+    expect(nomesDaNoite(segunda)).toEqual([
+      "VANZELLA", "FERNANDO", "CATIA", "SERRA",
+      "MASSEN", "DOUGLAS", "ATAIDE", "MONTANARO",
+    ]);
+  });
+
+  it("continua no mês seguinte a partir das últimas noites do mês anterior", () => {
+    const ultimaDeOutubro = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS).at(-1)!;
+    const primeiraDeNovembro = montarGradeDoMes({ ano: 2026, mes: 11 }, CONFIG, ANEIS)[0];
+    const [a, b] = [nomesDaNoite(ultimaDeOutubro).slice(0, 4), nomesDaNoite(ultimaDeOutubro).slice(4)];
+
+    // Quem estava depois da meia-noite passa para antes, uma faixa abaixo, e vice-versa.
+    expect(nomesDaNoite(primeiraDeNovembro)).toEqual([...descer(b, 1), ...descer(a, 1)]);
   });
 
   it("não põe ninguém nas faixas fixas", () => {
