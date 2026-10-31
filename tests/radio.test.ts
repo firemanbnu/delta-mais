@@ -90,18 +90,17 @@ function descer(lista: readonly string[], volta: number): string[] {
 
 /**
  * A série da escala de rádio de outubro/2026: a cada noite os anéis trocam de
- * turno; quem estava antes da meia-noite desce uma faixa e quem estava depois
- * volta na mesma ordem. 18/10 repete 02/10.
+ * turno e, a cada duas noites, os dois descem uma faixa. 18/10 repete 02/10.
  */
 const SERIE_OUTUBRO = [
   { noite: 0, a: descer(ANEL_1, 0), b: descer(ANEL_2, 0) },
-  { noite: 1, a: descer(ANEL_2, 0), b: descer(ANEL_1, 1) },
+  { noite: 1, a: descer(ANEL_2, 0), b: descer(ANEL_1, 0) },
   { noite: 2, a: descer(ANEL_1, 1), b: descer(ANEL_2, 1) },
-  { noite: 3, a: descer(ANEL_2, 1), b: descer(ANEL_1, 2) },
+  { noite: 3, a: descer(ANEL_2, 1), b: descer(ANEL_1, 1) },
   { noite: 4, a: descer(ANEL_1, 2), b: descer(ANEL_2, 2) },
-  { noite: 5, a: descer(ANEL_2, 2), b: descer(ANEL_1, 3) },
+  { noite: 5, a: descer(ANEL_2, 2), b: descer(ANEL_1, 2) },
   { noite: 6, a: descer(ANEL_1, 3), b: descer(ANEL_2, 3) },
-  { noite: 7, a: descer(ANEL_2, 3), b: descer(ANEL_1, 0) },
+  { noite: 7, a: descer(ANEL_2, 3), b: descer(ANEL_1, 3) },
   { noite: 8, a: descer(ANEL_1, 0), b: descer(ANEL_2, 0) },
 ];
 
@@ -211,14 +210,14 @@ describe("rodízio dos anéis", () => {
     expect(noites[0].anelUmNoTurnoA).toBe(true);
     expect(noites[1].anelUmNoTurnoA).toBe(false);
     expect(noites[0].slots["20-21"].pessoaId).toBe(ANEIS[1][0]);
-    // Quem estava depois da meia-noite volta para antes na mesma ordem.
     expect(noites[1].slots["20-21"].pessoaId).toBe(ANEIS[2][0]);
-    // Quem estava antes desce uma faixa: o último do anel abre o turno de depois.
-    expect(noites[1].slots["00-01:30"].pessoaId).toBe(ANEIS[1][3]);
-    expect(noites[1].slots["01:30-03"].pessoaId).toBe(ANEIS[1][0]);
+    expect(noites[1].slots["00-01:30"].pessoaId).toBe(ANEIS[1][0]);
+    // Duas noites depois o anel volta ao turno uma faixa abaixo: quem fechou abre.
+    expect(noites[2].slots["20-21"].pessoaId).toBe(ANEIS[1][3]);
+    expect(noites[2].slots["21-22"].pessoaId).toBe(ANEIS[1][0]);
   });
 
-  it("desce o anel do turno da noite a cada duas noites", () => {
+  it("desce os dois anéis uma faixa a cada duas noites", () => {
     const noites = montarGradeDoMes(OUTUBRO, CONFIG, ANEIS);
 
     expect(noites.slice(0, 9).map((noite) => noite.volta)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 0]);
@@ -231,13 +230,18 @@ describe("rodízio dos anéis", () => {
     expect(nomesDaNoite(noites[8])).toEqual(nomesDaNoite(noites[0]));
   });
 
-  it("monta novembro/2026 igual à escala da equipe a partir do dia 3", () => {
+  it("monta novembro/2026 igual à escala da equipe", () => {
     const noites = montarGradeDoMes({ ano: 2026, mes: 11 }, CONFIG, ANEIS);
 
-    expect(noites.slice(1, 4).map((noite) => noite.data)).toEqual([
+    expect(noites.slice(0, 4).map((noite) => noite.data)).toEqual([
+      "2026-11-01",
       "2026-11-03",
       "2026-11-05",
       "2026-11-07",
+    ]);
+    expect(nomesDaNoite(noites[0])).toEqual([
+      "DOUGLAS", "ATAIDE", "MONTANARO", "MASSEN",
+      "FERNANDO", "CATIA", "SERRA", "VANZELLA",
     ]);
     expect(nomesDaNoite(noites[1])).toEqual([
       "VANZELLA", "FERNANDO", "CATIA", "SERRA",
@@ -245,7 +249,7 @@ describe("rodízio dos anéis", () => {
     ]);
     expect(nomesDaNoite(noites[2])).toEqual([
       "MASSEN", "DOUGLAS", "ATAIDE", "MONTANARO",
-      "SERRA", "VANZELLA", "FERNANDO", "CATIA",
+      "VANZELLA", "FERNANDO", "CATIA", "SERRA",
     ]);
     expect(nomesDaNoite(noites[3])).toEqual([
       "SERRA", "VANZELLA", "FERNANDO", "CATIA",
@@ -258,9 +262,8 @@ describe("rodízio dos anéis", () => {
     const primeiraDeNovembro = montarGradeDoMes({ ano: 2026, mes: 11 }, CONFIG, ANEIS)[0];
     const [a, b] = [nomesDaNoite(ultimaDeOutubro).slice(0, 4), nomesDaNoite(ultimaDeOutubro).slice(4)];
 
-    // Quem estava depois da meia-noite volta para antes na mesma ordem; quem
-    // estava antes desce uma faixa e vai para depois.
-    expect(nomesDaNoite(primeiraDeNovembro)).toEqual([...b, ...descer(a, 1)]);
+    // 30/10 e 01/11 estão na mesma volta: os anéis só trocam de turno.
+    expect(nomesDaNoite(primeiraDeNovembro)).toEqual([...b, ...a]);
   });
 
   it("não põe ninguém nas faixas fixas", () => {
