@@ -155,16 +155,6 @@
   margin-top: 6mm !important;
 }
 
-/* Viaturas lado a lado em três colunas, em qualquer tela. */
-.modo-imagem .grade-viaturas {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 3mm !important;
-}
-
-.modo-imagem .grade-viaturas table {
-  font-size: 10px !important;
-}
-
 /* Folha A4 retrato com margem fixa: plantão e rádio cabem juntos numa página só. */
 @page {
   size: A4 portrait;
@@ -192,15 +182,6 @@
   /* Espaço entre o plantão e a escala de rádio, que vem logo abaixo. */
   .folha-impressao .impressao + .impressao {
     margin-top: 6mm !important;
-  }
-
-  .folha-impressao .grade-viaturas {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 3mm !important;
-  }
-
-  .folha-impressao .grade-viaturas table {
-    font-size: 10px !important;
   }
 
   .sem-impressao {
