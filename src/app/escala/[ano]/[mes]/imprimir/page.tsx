@@ -131,7 +131,7 @@ export default async function PaginaImprimir({
             </section>
           ) : null}
 
-          <section className="mt-5 grid gap-6 sm:grid-cols-3">
+          <section className="grade-viaturas mt-5 grid gap-6 sm:grid-cols-3">
             {unidades.map((unidade) => {
               const vagas = escala.postos.filter((p) => p.unidade === unidade);
               return (
@@ -185,12 +185,12 @@ export default async function PaginaImprimir({
 
           <section className="mt-6">
             <h2 className="text-sm font-bold uppercase">Noites de serviço</h2>
-            <table className="mt-2 w-full border-collapse text-center text-xs">
+            <table className="mt-2 w-full table-fixed border-collapse text-center text-[9px] leading-tight">
               <thead>
                 <tr>
-                  <th className="border border-black px-1 py-1 font-bold">Dia</th>
+                  <th className="w-[12mm] border border-black px-0.5 py-0.5 font-bold">Dia</th>
                   {dias.map((dia) => (
-                    <th key={paraISO(dia)} className="border border-black px-1 py-1 font-normal">
+                    <th key={paraISO(dia)} className="border border-black px-0 py-0.5 font-normal">
                       {DIAS_SEMANA_CURTO[dia.getDay()]}
                       <span className="block font-bold">{dia.getDate()}</span>
                     </th>
@@ -199,11 +199,11 @@ export default async function PaginaImprimir({
               </thead>
               <tbody>
                 <tr>
-                  <th className="border border-black px-1 py-1 text-left font-bold">Plantão</th>
+                  <th className="border border-black px-0.5 py-0.5 text-left font-bold">Plantão</th>
                   {dias.map((dia) => (
                     <td
   key={paraISO(dia)}
-                      className={`border border-black px-1 py-1 ${
+                      className={`border border-black px-0 py-1 ${
                         ehNoiteDeServico(dia, config.dataAncora, config.noiteDeServico)
                           ? "bg-black font-bold text-white"
                           : "text-neutral-400"
@@ -339,12 +339,12 @@ function TabelaRadioVertical({
     <table className="mt-3 w-full table-fixed border-collapse text-[8px] leading-tight">
       <thead>
         <tr>
-          <th className="w-[9mm] border border-black px-px py-0.5 text-left font-bold">
+          <th className="w-[15mm] border border-black px-0.5 py-0.5 text-left font-bold">
             Horário
           </th>
           {noites.map((noite) => (
             <th key={noite.data} className="border border-black px-px py-0.5 font-normal">
-              <span className="block font-bold">{formatarDataBR(noite.data).slice(0, 5)}</span>
+              <span className="font-bold">{formatarDataBR(noite.data).slice(0, 5)}</span>{" "}
               {DIAS_SEMANA_CURTO[new Date(`${noite.data}T12:00:00`).getDay()]}
             </th>
           ))}
@@ -356,10 +356,8 @@ function TabelaRadioVertical({
       <tbody>
         {SLOTS_RADIO.map((slot, indice) => (
           <tr key={slot.id} className={faixaImpressa(indice)}>
-            <td className="border border-black px-px py-0.5 font-mono">
-              {slot.inicio}
-              <br />
-              {slot.fim}
+            <td className="whitespace-nowrap border border-black px-0.5 py-0.5 font-mono">
+              {slot.inicio}–{slot.fim}
             </td>
             {noites.map((noite) => (
               <CelulaImpressaRadio
