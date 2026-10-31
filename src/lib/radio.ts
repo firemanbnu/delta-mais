@@ -13,8 +13,12 @@ import type { Problema } from "./rotacao";
 /** Quantidade de operadores em cada anel. O rodízio assume os dois com o mesmo tamanho. */
 export const OPERADORES_POR_ANEL = 4;
 
-/** Noites até o rodízio repetir: 4 posições × 2 noites cada. */
-export const NOITES_POR_CICLO = OPERADORES_POR_ANEL * 2;
+/**
+ * Noites até o rodízio repetir. Cada noite todos descem uma faixa e os anéis
+ * trocam de turno; com 4 posições, em 4 noites cada um volta à faixa e ao
+ * turno de partida.
+ */
+export const NOITES_POR_CICLO = OPERADORES_POR_ANEL;
 
 /** Vaga do plantão que também atende a central de comunicações. */
 export const POSTO_COMUNICACAO = "F3-BA2";
@@ -111,7 +115,7 @@ export type NoiteDeRadio = {
   data: string;
   /** Noite 0 é a `radioAncora`. */
   indice: number;
-  /** Quantas posições os dois anéis já giraram: 0..3. */
+  /** Quantas faixas os dois anéis já desceram: 0..3. */
   volta: number;
   /** `true` quando o anel 1 está no turno da noite (bloco A). */
   anelUmNoTurnoA: boolean;
@@ -172,9 +176,9 @@ export function indiceNoite(data: Date | string, config: ConfigRadio): number {
   return diffDias(data, noiteZeroDoRadio(config)) / 2;
 }
 
-/** Volta do rodízio: a cada duas noites os dois anéis avançam uma posição. */
+/** Volta do rodízio: a cada noite os dois anéis descem uma faixa. */
 export function voltaDoAnel(noite: number): number {
-  return (((Math.floor(noite / 2) % OPERADORES_POR_ANEL) + OPERADORES_POR_ANEL) % OPERADORES_POR_ANEL);
+  return ((noite % OPERADORES_POR_ANEL) + OPERADORES_POR_ANEL) % OPERADORES_POR_ANEL;
 }
 
 /** Os anéis trocam de turno a cada noite. */
@@ -188,7 +192,13 @@ export function anelDoSlot(slot: SlotRadio, noite: number): 1 | 2 {
   return anelUmNoTurnoA(noite) ? base : base === 1 ? 2 : 1;
 }
 
-/** Operador que cai na posição `posicaoNoAnel` do anel na volta `volta`. */
+/**
+ * Operador que cai na posição `posicaoNoAnel` do anel na volta `volta`.
+ *
+ * O rodízio desce: quem estava numa faixa vai para a faixa de baixo na noite
+ * seguinte (no outro turno), e quem estava na última volta para a primeira.
+ * Por isso a faixa `p` fica com quem está `volta` posições antes dela na lista.
+ */
 export function operadorDaPosicao(
   anel: 1 | 2,
   posicaoNoAnel: number,
@@ -198,7 +208,7 @@ export function operadorDaPosicao(
   const lista = aneis[anel] ?? [];
   if (lista.length === 0) return null;
   const tamanho = lista.length;
-  return lista[(posicaoNoAnel + volta) % tamanho] ?? null;
+  return lista[(((posicaoNoAnel - volta) % tamanho) + tamanho) % tamanho] ?? null;
 }
 
 /** Monta as oito faixas que giram numa noite, já com o operador automático. */
@@ -374,8 +384,8 @@ export function validarGradeRadio(
 /** Descrição curta da regra, usada na tela e na impressão. */
 export function resumoDaRegra(): string {
   return (
-    `Dois anéis de ${OPERADORES_POR_ANEL} operadores. A cada noite os anéis trocam de turno e a ` +
-    `cada duas noites avançam uma posição; o ciclo fecha em ${NOITES_POR_CICLO} noites. ` +
+    `Dois anéis de ${OPERADORES_POR_ANEL} operadores. A cada noite os anéis trocam de turno e ` +
+    `todos descem uma faixa; o ciclo fecha em ${NOITES_POR_CICLO} noites. ` +
     `As faixas 19:00-20:00 e 06:00-07:00 são fixas no ${POSTO_COMUNICACAO}.`
   );
 }
