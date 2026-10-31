@@ -14,11 +14,10 @@ import type { Problema } from "./rotacao";
 export const OPERADORES_POR_ANEL = 4;
 
 /**
- * Noites até o rodízio repetir. Cada noite todos descem uma faixa e os anéis
- * trocam de turno; com 4 posições, em 4 noites cada um volta à faixa e ao
- * turno de partida.
+ * Noites até o rodízio repetir: cada anel desce uma faixa a cada duas noites
+ * (4 posições × 2 noites).
  */
-export const NOITES_POR_CICLO = OPERADORES_POR_ANEL;
+export const NOITES_POR_CICLO = OPERADORES_POR_ANEL * 2;
 
 /** Vaga do plantão que também atende a central de comunicações. */
 export const POSTO_COMUNICACAO = "F3-BA2";
@@ -115,7 +114,7 @@ export type NoiteDeRadio = {
   data: string;
   /** Noite 0 é a `radioAncora`. */
   indice: number;
-  /** Quantas faixas os dois anéis já desceram: 0..3. */
+  /** Quantas faixas o anel do turno da noite (bloco A) já desceu: 0..3. */
   volta: number;
   /** `true` quando o anel 1 está no turno da noite (bloco A). */
   anelUmNoTurnoA: boolean;
@@ -176,9 +175,22 @@ export function indiceNoite(data: Date | string, config: ConfigRadio): number {
   return diffDias(data, noiteZeroDoRadio(config)) / 2;
 }
 
-/** Volta do rodízio: a cada noite os dois anéis descem uma faixa. */
+/**
+ * Quantas faixas o anel já desceu na noite.
+ *
+ * O anel desce uma faixa quando passa do turno de antes da meia-noite (A) para
+ * o de depois (B). Ao voltar de B para A ele mantém a ordem. Como o anel 1
+ * está em A nas noites pares e o anel 2 nas ímpares, cada um desce a cada duas
+ * noites, um numa noite e o outro na seguinte.
+ */
+export function voltaDoAnelNaNoite(anel: 1 | 2, noite: number): number {
+  const descidas = Math.floor((noite + (anel === 1 ? 1 : 0)) / 2);
+  return ((descidas % OPERADORES_POR_ANEL) + OPERADORES_POR_ANEL) % OPERADORES_POR_ANEL;
+}
+
+/** Volta do anel que está no turno da noite (bloco A). */
 export function voltaDoAnel(noite: number): number {
-  return ((noite % OPERADORES_POR_ANEL) + OPERADORES_POR_ANEL) % OPERADORES_POR_ANEL;
+  return voltaDoAnelNaNoite(anelUmNoTurnoA(noite) ? 1 : 2, noite);
 }
 
 /** Os anéis trocam de turno a cada noite. */
@@ -213,14 +225,14 @@ export function operadorDaPosicao(
 
 /** Monta as oito faixas que giram numa noite, já com o operador automático. */
 export function slotsDaNoite(noite: number, aneis: AneisRadio): Record<string, CelulaRadio> {
-  const volta = voltaDoAnel(noite);
   const slots: Record<string, CelulaRadio> = {};
 
   for (const slot of SLOTS_RODIZIO) {
+    const anel = anelDoSlot(slot, noite);
     const pessoaId = operadorDaPosicao(
-      anelDoSlot(slot, noite),
+      anel,
       slot.posicaoNoAnel ?? 0,
-      volta,
+      voltaDoAnelNaNoite(anel, noite),
       aneis,
     );
     if (pessoaId !== null) slots[slot.id] = { pessoaId, origem: "AUTO" };
@@ -384,8 +396,9 @@ export function validarGradeRadio(
 /** Descrição curta da regra, usada na tela e na impressão. */
 export function resumoDaRegra(): string {
   return (
-    `Dois anéis de ${OPERADORES_POR_ANEL} operadores. A cada noite os anéis trocam de turno e ` +
-    `todos descem uma faixa; o ciclo fecha em ${NOITES_POR_CICLO} noites. ` +
+    `Dois anéis de ${OPERADORES_POR_ANEL} operadores. A cada noite os anéis trocam de turno: ` +
+    `quem estava antes da meia-noite desce uma faixa e vai para depois; quem estava depois ` +
+    `volta para antes na mesma ordem. O ciclo fecha em ${NOITES_POR_CICLO} noites. ` +
     `As faixas 19:00-20:00 e 06:00-07:00 são fixas no ${POSTO_COMUNICACAO}.`
   );
 }
