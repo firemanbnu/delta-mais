@@ -115,10 +115,10 @@ e dezembro de 1 a 31. Para voltar aos dias pares em janeiro é preciso mudar a
 A escala de rádio acompanha o mês do plantão, com uma diferença: ela só mostra as
 noites em que há equipe, nunca as noites inversas.
 
-- Dois anéis de 4 operadores. A cada noite os anéis trocam de turno (quem estava
-  antes da meia-noite passa para depois, e vice-versa) e todos descem uma faixa;
-  quem estava na última faixa do turno volta para a primeira. O ciclo fecha em 4
-  noites (8 dias).
+- Dois anéis de 4 operadores. A cada noite os anéis trocam de turno: quem estava
+  antes da meia-noite desce uma faixa e vai para depois (o último volta para a
+  primeira faixa); quem estava depois volta para antes na mesma ordem. Cada anel
+  desce uma faixa a cada duas noites e o ciclo fecha em 8 noites (16 dias).
 - A contagem das noites é contínua desde a noite zero, então o mês seguinte
   continua a sequência das últimas noites do mês anterior.
 - As faixas de 19:00 às 20:00 e de 06:00 às 07:00 são fixas: quem atende a central
