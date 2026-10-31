@@ -59,6 +59,19 @@ export const SLOTS_RODIZIO = SLOTS_RADIO.filter((slot) => slot.bloco !== "FIXO")
 /** Faixas cobertas pelo bombeiro do `POSTO_COMUNICACAO`. */
 export const SLOTS_FIXOS = SLOTS_RADIO.filter((slot) => slot.vagaComunicacao);
 
+/**
+ * Modelo da grade de rádio: `horizontal` tem uma linha por noite e as faixas
+ * nas colunas; `vertical` tem as faixas nas linhas e uma coluna por noite.
+ * Vem do endereço (`?radio=vertical`), para a tela e a impressão concordarem.
+ */
+export const LAYOUTS_RADIO = ["horizontal", "vertical"] as const;
+export type LayoutRadio = (typeof LAYOUTS_RADIO)[number];
+
+export function layoutRadioDe(valor: unknown): LayoutRadio {
+  const texto = Array.isArray(valor) ? valor[0] : valor;
+  return texto === "vertical" ? "vertical" : "horizontal";
+}
+
 export function rotuloSlot(slot: SlotRadio): string {
   return `${slot.inicio} às ${slot.fim}`;
 }

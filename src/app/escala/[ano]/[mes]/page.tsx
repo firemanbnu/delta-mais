@@ -16,6 +16,7 @@ import { CelulaVaga } from "@/components/escala/celula-vaga";
 import { GradeFaxina } from "@/components/faxina/grade-faxina";
 import { BotaoRestaurarRadio } from "@/components/radio/botao-restaurar-radio";
 import { GradeRadio } from "@/components/radio/grade-radio";
+import { SeletorLayoutRadio, comLayoutRadio } from "@/components/radio/seletor-layout-radio";
 import { Badge } from "@/components/ui/badge";
 import { BotaoLink } from "@/components/ui/link-button";
 import {
@@ -39,6 +40,7 @@ import {
   semearPostos,
 } from "@/db/repositorio";
 import { ROTULO_UNIDADE, type Unidade } from "@/lib/dominio";
+import { layoutRadioDe } from "@/lib/radio";
 import {
   DIAS_SEMANA_CURTO,
   ehNoiteDeServico,
@@ -53,8 +55,12 @@ import {
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Escala do mês" };
 
-export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/[mes]">) {
+export default async function PaginaEscala({
+  params,
+  searchParams,
+}: PageProps<"/escala/[ano]/[mes]">) {
   const { ano, mes } = await params;
+  const layoutRadio = layoutRadioDe((await searchParams).radio);
   const anoNum = Number(ano);
   const mesNum = Number(mes);
 
@@ -158,7 +164,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
           <BotaoLink
             variant="outline"
             size="sm"
-            href={`${caminho(anoNum, mesNum)}/imprimir`}
+            href={comLayoutRadio(`${caminho(anoNum, mesNum)}/imprimir`, layoutRadio)}
           >
             <Printer data-icon="inline-start" />
             Imprimir / PDF
@@ -322,13 +328,18 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
       </section>
 
       {radio && radio.noites.length > 0 ? (
-        <section className="mt-8">
+        <section id="radio" className="mt-8 scroll-mt-24">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="font-semibold">Escala de rádio</h2>
             </div>
 
             <div className="sem-impressao flex flex-wrap items-center gap-2">
+              <SeletorLayoutRadio
+                caminho={caminho(anoNum, mesNum)}
+                atual={layoutRadio}
+                ancora="#radio"
+              />
               {trocasManuais > 0 ? <BotaoRestaurarRadio ano={anoNum} mes={mesNum} /> : null}
               <BotaoLink variant="outline" size="sm" href={`${caminho(anoNum, mesNum)}/exportar/radio`}>
                 <Download data-icon="inline-start" />
@@ -360,6 +371,7 @@ export default async function PaginaEscala({ params }: PageProps<"/escala/[ano]/
               }))}
               ausentes={radio.ausentes}
               comunicacao={radio.comunicacao}
+              layout={layoutRadio}
             />
           </div>
         </section>
