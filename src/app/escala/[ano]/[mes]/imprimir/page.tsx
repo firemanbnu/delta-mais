@@ -261,9 +261,7 @@ export default async function PaginaImprimir({
             <header className="border-b-2 border-black pb-3">
               <h1 className="text-xl font-bold uppercase tracking-wide">Escala de Rádio</h1>
               <p className="mt-1 text-sm">
-                {rotuloMesCurto(anoNum, mesNum)} · {radio.noites.length} noites de rádio ·{" "}
-                {radio.config.radioAncora ? formatarDataBR(radio.config.radioAncora) : ""} até o fim
-                da escala
+                {rotuloMesCurto(anoNum, mesNum)} · {radio.noites.length} noites de rádio
               </p>
             </header>
 
