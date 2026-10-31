@@ -114,7 +114,7 @@ export type NoiteDeRadio = {
   data: string;
   /** Noite 0 é a `radioAncora`. */
   indice: number;
-  /** Quantas faixas o anel do turno da noite (bloco A) já desceu: 0..3. */
+  /** Quantas faixas os dois anéis já desceram: 0..3. */
   volta: number;
   /** `true` quando o anel 1 está no turno da noite (bloco A). */
   anelUmNoTurnoA: boolean;
@@ -176,21 +176,16 @@ export function indiceNoite(data: Date | string, config: ConfigRadio): number {
 }
 
 /**
- * Quantas faixas o anel já desceu na noite.
+ * Quantas faixas os anéis já desceram na noite.
  *
- * O anel desce uma faixa quando passa do turno de antes da meia-noite (A) para
- * o de depois (B). Ao voltar de B para A ele mantém a ordem. Como o anel 1
- * está em A nas noites pares e o anel 2 nas ímpares, cada um desce a cada duas
- * noites, um numa noite e o outro na seguinte.
+ * Os anéis trocam de turno toda noite, então cada turno (antes e depois da
+ * meia-noite) recebe o mesmo anel a cada duas noites. Nessa volta o anel chega
+ * uma faixa abaixo de onde estava da última vez naquele turno: quem fechou o
+ * turno abre o turno na próxima vez.
  */
-export function voltaDoAnelNaNoite(anel: 1 | 2, noite: number): number {
-  const descidas = Math.floor((noite + (anel === 1 ? 1 : 0)) / 2);
-  return ((descidas % OPERADORES_POR_ANEL) + OPERADORES_POR_ANEL) % OPERADORES_POR_ANEL;
-}
-
-/** Volta do anel que está no turno da noite (bloco A). */
 export function voltaDoAnel(noite: number): number {
-  return voltaDoAnelNaNoite(anelUmNoTurnoA(noite) ? 1 : 2, noite);
+  const descidas = Math.floor(noite / 2);
+  return ((descidas % OPERADORES_POR_ANEL) + OPERADORES_POR_ANEL) % OPERADORES_POR_ANEL;
 }
 
 /** Os anéis trocam de turno a cada noite. */
@@ -232,7 +227,7 @@ export function slotsDaNoite(noite: number, aneis: AneisRadio): Record<string, C
     const pessoaId = operadorDaPosicao(
       anel,
       slot.posicaoNoAnel ?? 0,
-      voltaDoAnelNaNoite(anel, noite),
+      voltaDoAnel(noite),
       aneis,
     );
     if (pessoaId !== null) slots[slot.id] = { pessoaId, origem: "AUTO" };
@@ -396,9 +391,9 @@ export function validarGradeRadio(
 /** Descrição curta da regra, usada na tela e na impressão. */
 export function resumoDaRegra(): string {
   return (
-    `Dois anéis de ${OPERADORES_POR_ANEL} operadores. A cada noite os anéis trocam de turno: ` +
-    `quem estava antes da meia-noite desce uma faixa e vai para depois; quem estava depois ` +
-    `volta para antes na mesma ordem. O ciclo fecha em ${NOITES_POR_CICLO} noites. ` +
+    `Dois anéis de ${OPERADORES_POR_ANEL} operadores. A cada noite os anéis trocam de turno; ` +
+    `quando o anel volta a um turno, chega uma faixa abaixo de onde estava. ` +
+    `O ciclo fecha em ${NOITES_POR_CICLO} noites. ` +
     `As faixas 19:00-20:00 e 06:00-07:00 são fixas no ${POSTO_COMUNICACAO}.`
   );
 }
