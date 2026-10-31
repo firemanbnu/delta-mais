@@ -135,6 +135,32 @@
   margin: 10mm;
 }
 
+/*
+ * Imagem da escala para o WhatsApp: enquanto a imagem é gerada, a folha toma
+ * a forma da página impressa (largura A4, margem de 10 mm, sem as bordas da
+ * tela), em qualquer tamanho de tela.
+ */
+.modo-imagem {
+  width: 794px !important;
+  max-width: none !important;
+  padding: 38px !important;
+  background: #fff;
+  color: #000;
+}
+
+.modo-imagem .impressao {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.modo-imagem .impressao + .impressao {
+  margin-top: 6mm !important;
+}
+
 /* Folha A4 retrato com margem fixa: plantão e rádio cabem juntos numa página só. */
 @page {
   size: A4 portrait;
