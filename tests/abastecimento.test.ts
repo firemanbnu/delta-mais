@@ -22,18 +22,18 @@ describe("escala de abastecimento", () => {
       { ano: 2027, mes: 3 },
     ];
     expect(meses.map((m) => porLocal(m).epra)).toEqual([
-      "Fernando",
-      "Massen",
-      "Montanaro",
-      "Serra",
-      "Catia",
+      "FERNANDO",
+      "MASSEN",
+      "MONTANARO",
+      "SERRA",
+      "CATIA",
     ]);
     expect(meses.map((m) => porLocal(m).rti)).toEqual([
-      "Serra",
-      "Montanaro",
-      "Massen",
-      "Catia",
-      "Fernando",
+      "SERRA",
+      "MONTANARO",
+      "MASSEN",
+      "CATIA",
+      "FERNANDO",
     ]);
   });
 
