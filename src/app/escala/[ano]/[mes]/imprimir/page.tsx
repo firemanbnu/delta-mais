@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
-import { SeletorLayoutRadio, comLayoutRadio } from "@/components/radio/seletor-layout-radio";
+import { SeletorLayoutRadio } from "@/components/radio/seletor-layout-radio";
 import { BotaoLink } from "@/components/ui/link-button";
 import {
   buscarPeriodo,
@@ -72,7 +72,7 @@ export default async function PaginaImprimir({
   return (
     <div className="folha-impressao mx-auto max-w-6xl px-4 py-6">
       <div className="sem-impressao mb-6 flex flex-wrap items-center justify-between gap-4">
-        <BotaoLink variant="ghost" size="sm" href={comLayoutRadio(caminho, layoutRadio)}>
+        <BotaoLink variant="ghost" size="sm" href={caminho}>
           <ArrowLeft data-icon="inline-start" />
           Voltar para a escala
         </BotaoLink>

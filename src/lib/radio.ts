@@ -60,9 +60,9 @@ export const SLOTS_RODIZIO = SLOTS_RADIO.filter((slot) => slot.bloco !== "FIXO")
 export const SLOTS_FIXOS = SLOTS_RADIO.filter((slot) => slot.vagaComunicacao);
 
 /**
- * Modelo da grade de rádio: `horizontal` tem uma linha por noite e as faixas
- * nas colunas; `vertical` tem as faixas nas linhas e uma coluna por noite.
- * Vem do endereço (`?radio=vertical`), para a tela e a impressão concordarem.
+ * Modelo da grade de rádio na folha impressa: `horizontal` tem uma linha por
+ * noite e as faixas nas colunas; `vertical` tem as faixas nas linhas e uma
+ * coluna por noite. Vem do endereço da folha (`?radio=vertical`).
  */
 export const LAYOUTS_RADIO = ["horizontal", "vertical"] as const;
 export type LayoutRadio = (typeof LAYOUTS_RADIO)[number];
