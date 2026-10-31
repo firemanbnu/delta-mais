@@ -11,6 +11,20 @@ const LARGURA_A4 = 794;
 /** Margem lateral da folha na imagem (10 mm), igual ao padding de `.modo-imagem`. */
 const MARGEM = 38;
 
+/**
+ * Maior área de imagem que o Safari do iPhone consegue gerar (cerca de 16,7
+ * milhões de pixels). Acima disso a imagem sai em branco.
+ */
+const AREA_MAXIMA = 16_000_000;
+/** Ampliação máxima: nitidez boa para dar zoom sem um arquivo enorme. */
+const AMPLIACAO_MAXIMA = 4;
+
+/** Quantas vezes a imagem é maior que a folha na tela, dentro do limite de área. */
+function ampliacaoPara(largura: number, altura: number): number {
+  const cabe = Math.sqrt(AREA_MAXIMA / (largura * altura));
+  return Math.max(1, Math.min(AMPLIACAO_MAXIMA, Math.floor(cabe * 10) / 10));
+}
+
 /** Pausa curta para o navegador recalcular o layout; funciona com a aba em segundo plano. */
 function esperar() {
   return new Promise((r) => setTimeout(r, 80));
@@ -59,12 +73,13 @@ export function BotaoImagemEscala({
       const largura = Math.max(LARGURA_A4, alvo.scrollWidth + MARGEM);
       alvo.style.setProperty("width", `${largura}px`, "important");
       await esperar();
+      const altura = alvo.scrollHeight;
       const { toBlob } = await import("html-to-image");
       const blob = await toBlob(alvo, {
-        pixelRatio: 2,
+        pixelRatio: ampliacaoPara(largura, altura),
         backgroundColor: "#ffffff",
         width: largura,
-        height: alvo.scrollHeight,
+        height: altura,
         filter: (no) => !(no instanceof HTMLElement && no.classList.contains("sem-impressao")),
       });
       if (!blob) throw new Error("A imagem saiu vazia.");
