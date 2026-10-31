@@ -131,7 +131,7 @@ export default async function PaginaImprimir({
             </section>
           ) : null}
 
-          <section className="mt-5 grid gap-6 sm:grid-cols-3">
+          <section className="grade-viaturas mt-5 grid gap-6 sm:grid-cols-3">
             {unidades.map((unidade) => {
               const vagas = escala.postos.filter((p) => p.unidade === unidade);
               return (
@@ -268,41 +268,14 @@ export default async function PaginaImprimir({
             </header>
 
             {layoutRadio === "vertical" ? (
-              <table className="mt-3 w-full table-fixed border-collapse text-[8px] leading-tight">
-                <thead>
-                  <tr>
-                    <th className="w-[9mm] border border-black px-px py-0.5 text-left font-bold">
-                      Horário
-                    </th>
-                    {radio.noites.map((noite) => (
-                      <th key={noite.data} className="border border-black px-px py-0.5 font-normal">
-                        <span className="block font-bold">{formatarDataBR(noite.data).slice(0, 5)}</span>
-                        {DIAS_SEMANA_CURTO[new Date(`${noite.data}T12:00:00`).getDay()]}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {SLOTS_RADIO.map((slot, indice) => (
-                    <tr key={slot.id} className={faixaImpressa(indice)}>
-                      <td className="border border-black px-px py-0.5 font-mono">
-                        {slot.inicio}
-                        <br />
-                        {slot.fim}
-                      </td>
-                      {radio.noites.map((noite) => (
-                        <CelulaImpressaRadio
-                          key={noite.data}
-                          noite={noite}
-                          slot={slot}
-                          radio={radio}
-                          compacta
-                        />
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              quinzenas(radio.noites).map((noites, indice, todas) => (
+                <TabelaRadioVertical
+                  key={indice}
+                  noites={noites}
+                  colunas={Math.max(...todas.map((q) => q.length))}
+                  radio={radio}
+                />
+              ))
             ) : (
               <table className="mt-3 w-full border-collapse text-[9px]">
                 <thead>
@@ -336,6 +309,76 @@ export default async function PaginaImprimir({
   );
 }
 
+/**
+ * Divide as noites do mês em duas quinzenas (dias 1 a 15 e 16 até o fim), uma
+ * tabela embaixo da outra, para a grade vertical caber na largura da folha.
+ */
+function quinzenas(noites: NoiteDeRadio[]): NoiteDeRadio[][] {
+  const dia = (noite: NoiteDeRadio) => Number(noite.data.slice(8, 10));
+  return [noites.filter((n) => dia(n) <= 15), noites.filter((n) => dia(n) > 15)].filter(
+    (q) => q.length > 0,
+  );
+}
+
+/**
+ * Grade de rádio com as datas nas colunas e os horários nas linhas. As duas
+ * quinzenas usam o mesmo número de colunas para ficarem alinhadas; a que tem
+ * menos noites ganha colunas vazias no fim.
+ */
+function TabelaRadioVertical({
+  noites,
+  colunas,
+  radio,
+}: {
+  noites: NoiteDeRadio[];
+  colunas: number;
+  radio: EscalaRadio;
+}) {
+  const vazias = Array.from({ length: colunas - noites.length }, (_, i) => i);
+  return (
+    <table className="mt-3 w-full table-fixed border-collapse text-[9px] leading-tight">
+      <thead>
+        <tr>
+          <th className="w-[11mm] border border-black px-0.5 py-0.5 text-left font-bold">
+            Horário
+          </th>
+          {noites.map((noite) => (
+            <th key={noite.data} className="border border-black px-0.5 py-0.5 font-normal">
+              <span className="block font-bold">{formatarDataBR(noite.data).slice(0, 5)}</span>
+              {DIAS_SEMANA_CURTO[new Date(`${noite.data}T12:00:00`).getDay()]}
+            </th>
+          ))}
+          {vazias.map((i) => (
+            <th key={`vazia-${i}`} aria-hidden />
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {SLOTS_RADIO.map((slot, indice) => (
+          <tr key={slot.id}>
+            <td className={`border border-black px-0.5 py-0.5 font-mono ${faixaImpressa(indice)}`}>
+              {slot.inicio}–{slot.fim}
+            </td>
+            {noites.map((noite) => (
+              <CelulaImpressaRadio
+                key={noite.data}
+                noite={noite}
+                slot={slot}
+                radio={radio}
+                faixa={faixaImpressa(indice)}
+                compacta
+              />
+            ))}
+            {vazias.map((i) => (
+              <td key={`vazia-${i}`} aria-hidden />
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 /** Linhas alternadas na folha: uma branca, a seguinte laranja clarinho. */
 function faixaImpressa(indice: number): string {
   return indice % 2 === 1 ? "bg-orange-100" : "bg-white";
@@ -347,14 +390,17 @@ function CelulaImpressaRadio({
   slot,
   radio,
   compacta = false,
+  faixa = "",
 }: {
   noite: NoiteDeRadio;
   slot: SlotRadio;
   radio: EscalaRadio;
+  /** Cor da linha aplicada na própria célula (grade vertical). */
+  faixa?: string;
   /** Modelo vertical: colunas estreitas, sem espaço lateral e texto centralizado. */
   compacta?: boolean;
 }) {
-  const base = `border border-black py-0.5 ${compacta ? "px-px text-center" : "px-0.5"}`;
+  const base = `border border-black py-0.5 ${faixa} ${compacta ? "px-0.5 text-center" : "px-0.5"}`;
   if (slot.bloco === "FIXO") {
     return (
       <td className={`${base} text-center font-semibold`}>
