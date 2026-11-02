@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { toast } from "sonner";
 import { Pencil } from "lucide-react";
 
@@ -37,17 +37,19 @@ export type DadosEditorDocumento = {
 
 export function EditorDocumento({ dados, pessoa }: { dados: DadosEditorDocumento; pessoa: string }) {
   const [aberto, setAberto] = useState(false);
-  const [estado, enviar, pendente] = useActionState(salvarDocumentoAction, null);
-
-  useEffect(() => {
-    if (!estado) return;
-    if (estado.ok) {
-      toast.success(estado.mensagem);
-      setAberto(false);
-    } else {
-      toast.error(estado.erro);
-    }
-  }, [estado]);
+  const [, enviar, pendente] = useActionState(
+    async (anterior: unknown, dados: FormData) => {
+      const resultado = await salvarDocumentoAction(anterior, dados);
+      if (resultado.ok) {
+        toast.success(resultado.mensagem);
+        setAberto(false);
+      } else {
+        toast.error(resultado.erro);
+      }
+      return resultado;
+    },
+    null,
+  );
 
   const rotuloData =
     dados.forma === "VENCIMENTO" ? "Data de vencimento" : "Data de realização";
