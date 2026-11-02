@@ -36,6 +36,13 @@
       "when": 1793158800000,
       "tag": "0004_cobertura_ferias",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793600411758,
+      "tag": "0005_gestao_documentos",
+      "breakpoints": true
     }
   ]
 }
