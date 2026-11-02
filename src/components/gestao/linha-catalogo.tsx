@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Save } from "lucide-react";
 
@@ -30,6 +30,9 @@ export type DadosTipo = {
  */
 export function LinhaCatalogo({ tipo }: { tipo: DadosTipo }) {
   const [estado, enviar, pendente] = useActionState(salvarTipoDocumentoAction, null);
+  const [forma, setForma] = useState<FormaDocumento>(tipo.forma);
+  // Só "realização + validade" usa meses; os outros não vencem pela validade.
+  const usaValidade = forma === "REALIZACAO";
 
   useEffect(() => {
     if (!estado) return;
@@ -60,30 +63,39 @@ export function LinhaCatalogo({ tipo }: { tipo: DadosTipo }) {
 
       <select
         name="forma"
-        defaultValue={tipo.forma}
+        value={forma}
+        onChange={(e) => setForma(e.target.value as FormaDocumento)}
         aria-label="Como a data é lida"
         className={CLASSE_SELECT}
       >
-        {FORMAS_DOCUMENTO.map((forma) => (
-          <option key={forma} value={forma}>
-            {ROTULO_FORMA[forma]}
+        {FORMAS_DOCUMENTO.map((opcao) => (
+          <option key={opcao} value={opcao}>
+            {ROTULO_FORMA[opcao]}
           </option>
         ))}
       </select>
 
       <div className="flex items-center gap-1.5">
-        <Input
-          name="validadeMeses"
-          type="number"
-          min={1}
-          max={240}
-          inputMode="numeric"
-          defaultValue={tipo.validadeMeses ?? ""}
-          placeholder="—"
-          aria-label="Validade em meses"
-          className={tipo.forma === "REALIZACAO" && !tipo.validadeMeses ? "border-amber-500" : ""}
-        />
-        <span className="text-xs text-muted-foreground">meses</span>
+        {usaValidade ? (
+          <>
+            <Input
+              name="validadeMeses"
+              type="number"
+              min={1}
+              max={240}
+              inputMode="numeric"
+              defaultValue={tipo.validadeMeses ?? ""}
+              placeholder="—"
+              aria-label="Validade em meses"
+              className={tipo.validadeMeses ? "" : "border-amber-500"}
+            />
+            <span className="text-xs text-muted-foreground">meses</span>
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            {forma === "VENCIMENTO" ? "vence na data do documento" : "não vence"}
+          </span>
+        )}
       </div>
 
       <fieldset className="flex flex-wrap gap-x-3 gap-y-1 text-xs">

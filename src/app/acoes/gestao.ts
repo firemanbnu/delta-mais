@@ -134,6 +134,8 @@ export async function salvarTipoDocumentoAction(
 
   try {
     const { id, ...campos } = entrada.data;
+    // Validade em meses só vale para "realização + validade".
+    if (campos.forma !== "REALIZACAO") campos.validadeMeses = null;
     await getDb().update(tiposDocumento).set(campos).where(eq(tiposDocumento.id, id));
     return ok(`${campos.nome} atualizado.`);
   } catch (erro) {
