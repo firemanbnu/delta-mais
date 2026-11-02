@@ -6,6 +6,7 @@ import {
   BookCheck,
   CalendarDays,
   CalendarRange,
+  FileBarChart,
   FileCheck2,
   Flame,
   House,
@@ -28,6 +29,7 @@ const ITENS_ESCALAS = [
 const ITENS_GESTAO = [
   { href: "/gestao", rotulo: "Gestão", icone: LayoutDashboard },
   { href: "/gestao/documentos", rotulo: "Documentos", icone: FileCheck2 },
+  { href: "/gestao/relatorios", rotulo: "Relatórios", icone: FileBarChart },
   { href: "/gestao/catalogo", rotulo: "Catálogo", icone: BookCheck },
   { href: "/gestao/efetivo", rotulo: "Efetivo", icone: UsersRound },
 ] as const;

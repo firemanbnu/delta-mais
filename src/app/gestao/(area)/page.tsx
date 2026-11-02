@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookCheck, ChevronRight, FileCheck2, LogOut, UsersRound } from "lucide-react";
+import { BookCheck, ChevronRight, FileBarChart, FileCheck2, LogOut, UsersRound } from "lucide-react";
 
 import { sairGestaoAction } from "@/app/acoes/gestao";
 import {
@@ -37,6 +37,12 @@ export default async function Gestao() {
       titulo: "Documentação",
       descricao: "Grade de cada pessoa e lista de pendências.",
       icone: FileCheck2,
+    },
+    {
+      href: "/gestao/relatorios",
+      titulo: "Relatórios",
+      descricao: "Pendências, vencimentos, grade e fichas, em PDF ou imagem.",
+      icone: FileBarChart,
     },
     {
       href: "/gestao/catalogo",
@@ -242,7 +248,7 @@ export default async function Gestao() {
         </Cartao>
       ) : null}
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {modulos.map(({ href, titulo, descricao, icone: Icone }) => (
           <Link
             key={href}
