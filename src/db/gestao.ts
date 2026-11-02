@@ -5,6 +5,7 @@ import { documentosPessoa, efetivo, tiposDocumento } from "./schema";
 import type { DocumentoPessoa, Efetivo, TipoDocumento } from "./schema";
 import {
   avaliarDocumento,
+  compararNomes,
   STATUS_PENDENTES,
   type AvaliacaoDocumento,
   type EquipeEfetivo,
@@ -72,8 +73,10 @@ export async function semearTiposDocumento() {
   if (faltando.length > 0) await db.insert(tiposDocumento).values(faltando);
 }
 
+/** Efetivo em ordem alfabética pelo nome completo. */
 export async function listarEfetivo(): Promise<Efetivo[]> {
-  return getDb().select().from(efetivo).orderBy(asc(efetivo.nome));
+  const pessoas = await getDb().select().from(efetivo);
+  return pessoas.sort((a, b) => compararNomes(a.nome, b.nome));
 }
 
 export async function listarTiposDocumento(): Promise<TipoDocumento[]> {
