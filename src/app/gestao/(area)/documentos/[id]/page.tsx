@@ -23,7 +23,7 @@ export default async function FichaDocumentos({ params }: PageProps<"/gestao/doc
   const id = Number((await params).id);
   if (!Number.isInteger(id) || id <= 0) notFound();
 
-  const quadro = await montarQuadroDocumentos({ efetivoId: id, incluirDesligados: true });
+  const quadro = await montarQuadroDocumentos({ efetivoId: id });
   const linha = quadro.linhas[0];
   if (!linha) notFound();
   const { pessoa } = linha;
@@ -57,9 +57,11 @@ export default async function FichaDocumentos({ params }: PageProps<"/gestao/doc
           </p>
         ) : null}
         <p className="mt-2 text-sm">
-          {linha.pendentes > 0
-            ? `${linha.pendentes} documentos pedem atenção.`
-            : "Nenhuma pendência."}
+          {pessoa.situacao !== "ATIVO"
+            ? `${ROTULO_SITUACAO_EFETIVO[pessoa.situacao]}: fica fora da grade e da contagem até voltar a ativo (em Efetivo).`
+            : linha.pendentes > 0
+              ? `${linha.pendentes} documentos pedem atenção.`
+              : "Nenhuma pendência."}
         </p>
       </header>
 

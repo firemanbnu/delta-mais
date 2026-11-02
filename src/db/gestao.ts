@@ -108,11 +108,12 @@ export function hojeISO(): string {
 
 /**
  * Monta o quadro de documentos: uma linha por pessoa e uma célula por tipo,
- * já com a situação calculada. Desligados ficam de fora por padrão.
+ * já com a situação calculada. Só entra quem está ativo: afastados e
+ * desligados não aparecem nem contam, até voltarem ao trabalho. A ficha de
+ * uma pessoa (efetivoId) mostra qualquer situação.
  */
 export async function montarQuadroDocumentos(filtro: {
   equipe?: EquipeEfetivo | null;
-  incluirDesligados?: boolean;
   efetivoId?: number;
 } = {}): Promise<QuadroDocumentos> {
   await semearTiposDocumento();
@@ -137,7 +138,7 @@ export async function montarQuadroDocumentos(filtro: {
 
   const linhas = pessoas
     .filter((p) => (filtro.efetivoId ? p.id === filtro.efetivoId : true))
-    .filter((p) => filtro.incluirDesligados || p.situacao !== "DESLIGADO")
+    .filter((p) => filtro.efetivoId || p.situacao === "ATIVO")
     .filter((p) => !filtro.equipe || p.equipe === filtro.equipe)
     .map((pessoa) => {
       const celulas = tiposAtivos.map((tipo) => {
@@ -152,7 +153,6 @@ export async function montarQuadroDocumentos(filtro: {
           pessoa.funcao,
           hoje,
         );
-        // Afastados aparecem, mas não contam nos alertas.
         if (pessoa.situacao === "ATIVO") contagem[avaliacao.status] += 1;
         return { tipo, registro, avaliacao };
       });
