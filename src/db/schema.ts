@@ -13,6 +13,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { FUNCOES, NOITES_DE_SERVICO } from "../lib/dominio";
+import {
+  EQUIPES_EFETIVO,
+  FORMAS_DOCUMENTO,
+  FUNCOES_EFETIVO,
+  GRUPOS_DOCUMENTO,
+  SITUACOES_DOCUMENTO,
+  SITUACOES_EFETIVO,
+} from "../lib/gestao";
 
 /*
  * Valores das tabelas `automacao_*`, do antigo agente de assinaturas no
@@ -281,6 +289,83 @@ export const automacaoAgente = pgTable("automacao_agente", {
   batidoEm: timestamp("batido_em", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/*
+ * Gestão: efetivo de todas as equipes e controle de documentos.
+ *
+ * O efetivo é separado de `people` (o quadro da escala da Delta): ele cobre as
+ * quatro equipes, os feristas e a gerência, e vem do cadastro do SCI NVT.
+ */
+export const enumEquipeEfetivo = pgEnum("equipe_efetivo", EQUIPES_EFETIVO);
+export const enumFuncaoEfetivo = pgEnum("funcao_efetivo", FUNCOES_EFETIVO);
+export const enumSituacaoEfetivo = pgEnum("situacao_efetivo", SITUACOES_EFETIVO);
+export const enumGrupoDocumento = pgEnum("grupo_documento", GRUPOS_DOCUMENTO);
+export const enumFormaDocumento = pgEnum("forma_documento", FORMAS_DOCUMENTO);
+export const enumSituacaoDocumento = pgEnum("situacao_documento", SITUACOES_DOCUMENTO);
+
+export const efetivo = pgTable(
+  "efetivo",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    nome: text("nome").notNull(),
+    nomeGuerra: text("nome_guerra"),
+    matricula: text("matricula"),
+    funcao: enumFuncaoEfetivo("funcao"),
+    equipe: enumEquipeEfetivo("equipe"),
+    situacao: enumSituacaoEfetivo("situacao").notNull().default("ATIVO"),
+    /** Nome da pasta da pessoa no Drive "Controle Documentos". */
+    pastaDrive: text("pasta_drive"),
+    observacoes: text("observacoes"),
+    atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("efetivo_nome_idx").on(t.nome),
+    index("efetivo_equipe_idx").on(t.equipe),
+  ],
+);
+
+export const tiposDocumento = pgTable(
+  "tipos_documento",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    codigo: text("codigo").notNull(),
+    nome: text("nome").notNull(),
+    grupo: enumGrupoDocumento("grupo").notNull(),
+    forma: enumFormaDocumento("forma").notNull().default("REALIZACAO"),
+    /** Meses de validade a partir da realização. `null` = não definida. */
+    validadeMeses: integer("validade_meses"),
+    /** Funções que precisam do documento. Vazio = todas. */
+    funcoesObrigatorias: enumFuncaoEfetivo("funcoes_obrigatorias").array().notNull().default([]),
+    ordem: integer("ordem").notNull().default(0),
+    ativo: boolean("ativo").notNull().default(true),
+  },
+  (t) => [uniqueIndex("tipos_documento_codigo_idx").on(t.codigo)],
+);
+
+export const documentosPessoa = pgTable(
+  "documentos_pessoa",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    efetivoId: integer("efetivo_id")
+      .notNull()
+      .references(() => efetivo.id, { onDelete: "cascade" }),
+    tipoId: integer("tipo_id")
+      .notNull()
+      .references(() => tiposDocumento.id, { onDelete: "cascade" }),
+    /** Realização ou vencimento, conforme a `forma` do tipo. */
+    data: date("data"),
+    situacao: enumSituacaoDocumento("situacao").notNull().default("ENTREGUE"),
+    arquivoUrl: text("arquivo_url"),
+    observacao: text("observacao"),
+    /** De onde veio a última informação: PLANILHA, MANUAL ou DRIVE. */
+    origem: text("origem").notNull().default("MANUAL"),
+    atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("documentos_pessoa_efetivo_tipo_idx").on(t.efetivoId, t.tipoId),
+    index("documentos_pessoa_tipo_idx").on(t.tipoId),
+  ],
+);
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   people: many(people),
 }));
@@ -320,6 +405,9 @@ export const radioExcecaoRelations = relations(radioExcecao, ({ one }) => ({
   pessoa: one(people, { fields: [radioExcecao.pessoaId], references: [people.id] }),
 }));
 
+export type Efetivo = typeof efetivo.$inferSelect;
+export type TipoDocumento = typeof tiposDocumento.$inferSelect;
+export type DocumentoPessoa = typeof documentosPessoa.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
