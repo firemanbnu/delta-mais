@@ -126,6 +126,18 @@
   }
   html {
     @apply font-sans;
+    color-scheme: light;
+  }
+  /* Controles nativos (listas, calendário, barras de rolagem) no tom do tema. */
+  html.dark {
+    color-scheme: dark;
+  }
+  /* A lista aberta de um <select> herda o fundo transparente e fica branca no
+     Windows: as opções usam as cores de menu do tema. */
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
   }
 }
 
