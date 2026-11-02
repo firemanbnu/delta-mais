@@ -16,7 +16,7 @@ export default async function Gestao() {
   const semValidade = tipos.filter(
     (t) => t.ativo && t.forma === "REALIZACAO" && !t.validadeMeses,
   ).length;
-  const ativos = quadro.linhas.filter((l) => l.pessoa.situacao === "ATIVO").length;
+  const ativos = quadro.linhas.length;
   const { contagem } = quadro;
   const urgentes = contagem.VENCIDO + contagem.FALTA + contagem.VENCE_30;
 

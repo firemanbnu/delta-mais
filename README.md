@@ -198,8 +198,9 @@ um novo deploy. Sem ela, a área fica trancada para todos. Trocar a senha encerr
 sessões abertas.
 
 - **Efetivo** (`efetivo`): todas as equipes, feristas e gerência, importados do
-  cadastro de bombeiros do SCI NVT. Desligados não geram alerta; afastados aparecem,
-  mas não contam.
+  cadastro de bombeiros do SCI NVT. Afastados e desligados não aparecem
+  na grade de documentos nem contam nos alertas; voltam a aparecer quando a pessoa
+  for marcada de novo como ativa. A ficha individual continua acessível pelo Efetivo.
 - **Catálogo** (`tipos_documento`): cada documento diz como a data é lida
   (realização + validade, vencimento ou só entrega), a validade em meses e as
   funções que precisam dele (nenhuma marcada = todas).

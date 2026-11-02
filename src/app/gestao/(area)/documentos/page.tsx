@@ -82,7 +82,6 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
   const atual: Busca = { equipe: equipe ?? undefined, grupo: grupo ?? undefined, visao };
 
   const pendencias = quadro.linhas
-    .filter((l) => l.pessoa.situacao === "ATIVO")
     .flatMap((linha) =>
       linha.celulas
         .filter((c) => !grupo || c.tipo.grupo === grupo)
@@ -226,14 +225,13 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
             </thead>
             <tbody>
               {quadro.linhas.map((linha) => (
-                <tr key={linha.pessoa.id} className={linha.pessoa.situacao === "ATIVO" ? "" : "opacity-50"}>
+                <tr key={linha.pessoa.id}>
                   <th className="sticky left-0 z-10 border-b bg-background px-3 py-1.5 text-left font-normal">
                     <Link href={`/gestao/documentos/${linha.pessoa.id}`} className="font-medium hover:underline">
                       {linha.pessoa.nomeGuerra ?? linha.pessoa.nome}
                     </Link>
                     <span className="ml-1.5 text-muted-foreground">
                       {linha.pessoa.equipe ? ROTULO_EQUIPE[linha.pessoa.equipe] : ""}
-                      {linha.pessoa.situacao === "AFASTADO" ? " · afastado" : ""}
                     </span>
                   </th>
                   {linha.celulas
