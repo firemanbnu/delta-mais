@@ -178,7 +178,7 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
                   <tr key={`${pessoa.id}-${celula.tipo.id}`} className="border-t">
                     <td className="px-3 py-2">
                       <Link href={`/gestao/documentos/${pessoa.id}`} className="font-medium hover:underline">
-                        {pessoa.nomeGuerra ?? pessoa.nome}
+                        {pessoa.nome}
                       </Link>
                     </td>
                     <td className="hidden px-3 py-2 sm:table-cell">
@@ -226,9 +226,9 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
             <tbody>
               {quadro.linhas.map((linha) => (
                 <tr key={linha.pessoa.id}>
-                  <th className="sticky left-0 z-10 border-b bg-background px-3 py-1.5 text-left font-normal">
+                  <th className="sticky left-0 z-10 whitespace-nowrap border-b bg-background px-3 py-1.5 text-left font-normal">
                     <Link href={`/gestao/documentos/${linha.pessoa.id}`} className="font-medium hover:underline">
-                      {linha.pessoa.nomeGuerra ?? linha.pessoa.nome}
+                      {linha.pessoa.nome}
                     </Link>
                     <span className="ml-1.5 text-muted-foreground">
                       {linha.pessoa.equipe ? ROTULO_EQUIPE[linha.pessoa.equipe] : ""}

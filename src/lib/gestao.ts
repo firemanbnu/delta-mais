@@ -15,6 +15,11 @@ export const EQUIPES_EFETIVO = [
 ] as const;
 export type EquipeEfetivo = (typeof EQUIPES_EFETIVO)[number];
 
+/** Compara nomes em ordem alfabética, ignorando acentos e maiúsculas (Á junto do A). */
+export function compararNomes(a: string, b: string): number {
+  return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+}
+
 export const ROTULO_EQUIPE: Record<EquipeEfetivo, string> = {
   ALFA: "Alfa",
   BRAVO: "Bravo",
