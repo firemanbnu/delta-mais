@@ -188,3 +188,24 @@ impressa, junto da faxina.
   o mantém como require externo; a Vercel instala o WASM (~10 MB) mesmo sem usá-lo.
 - `semearPostos()` roda a cada request das páginas, o que gera uma escrita por
   visita. É idempotente, mas não é gratuito.
+
+## Gestão
+
+A entrada do app (`/`) separa **Escalas** (o que era o painel, agora em `/plantao`)
+e **Gestão** (`/gestao`). A Gestão guarda dados pessoais do efetivo e pede senha:
+defina a variável `GESTAO_SENHA` na Vercel (Settings → Environment Variables) e faça
+um novo deploy. Sem ela, a área fica trancada para todos. Trocar a senha encerra as
+sessões abertas.
+
+- **Efetivo** (`efetivo`): todas as equipes, feristas e gerência, importados do
+  cadastro de bombeiros do SCI NVT. Desligados não geram alerta; afastados aparecem,
+  mas não contam.
+- **Catálogo** (`tipos_documento`): cada documento diz como a data é lida
+  (realização + validade, vencimento ou só entrega), a validade em meses e as
+  funções que precisam dele (nenhuma marcada = todas).
+- **Documentos** (`documentos_pessoa`): um registro por pessoa e documento, com data,
+  situação, link do arquivo e observação. A situação mostrada (vencido, vence em 30
+  ou 90 dias, falta, conferir) é calculada na leitura em `src/lib/gestao.ts`.
+
+Os dados foram importados da planilha "Controle de documentos digitais" direto no
+banco; o repositório não guarda dados pessoais.
