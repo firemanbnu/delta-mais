@@ -1,7 +1,15 @@
 type ItemRadar = { rotulo: string; titulo?: string; valor: number | null; referencia?: number | null };
 
 /** Radar 0–10 em SVG puro: pessoa (preenchido) e média da equipe (tracejado). */
-export function Radar({ itens }: { itens: ItemRadar[] }) {
+export function Radar({
+  itens,
+  rotuloValor = "Avaliado",
+  rotuloReferencia = "Média da equipe",
+}: {
+  itens: ItemRadar[];
+  rotuloValor?: string;
+  rotuloReferencia?: string;
+}) {
   const n = itens.length;
   const largura = 600;
   const altura = 440;
@@ -70,11 +78,11 @@ export function Radar({ itens }: { itens: ItemRadar[] }) {
       </svg>
       <figcaption className="mt-1 flex justify-center gap-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-4 rounded-sm bg-sky-500/40 ring-1 ring-sky-500" /> Avaliado
+          <span className="inline-block h-2.5 w-4 rounded-sm bg-sky-500/40 ring-1 ring-sky-500" /> {rotuloValor}
         </span>
         {temRef ? (
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-4 border-t-2 border-dashed border-muted-foreground" /> Média da equipe
+            <span className="inline-block w-4 border-t-2 border-dashed border-muted-foreground" /> {rotuloReferencia}
           </span>
         ) : null}
       </figcaption>

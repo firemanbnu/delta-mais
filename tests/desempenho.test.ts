@@ -8,7 +8,11 @@ import {
   classificar,
   classificarMedia,
   eixos9Box,
+  combinarNotas,
+  mediaDasNotas,
   mediaGeral,
+  notasInteiras,
+  notasNaVisao,
   prioridades,
   pontosFortes,
   quadrante9Box,
@@ -88,6 +92,23 @@ describe("cálculos", () => {
     expect(a.criticas[0].competencia.numero).toBe(5);
     expect(a.duplas[0].mentor.id).toBe(1);
     expect(a.duplas[0].aprendizes.map((x) => x.pessoa.id)).toEqual([2]);
+  });
+});
+
+describe("avaliação pelos colegas", () => {
+  it("média dos colegas item a item e mínimo de respostas", () => {
+    const r1 = { "1": 8, "2": 6 };
+    const r2 = { "1": 9 };
+    expect(mediaDasNotas([r1, r2])).toEqual({ "1": 8.5, "2": 6 });
+    expect(notasNaVisao({ "1": 10 }, [r1], "colegas")).toEqual({});
+    expect(notasNaVisao({ "1": 10 }, [r1, r2], "colegas")).toEqual({ "1": 8.5, "2": 6 });
+    expect(notasNaVisao({ "1": 10 }, [r1, r2], "minha")).toEqual({ "1": 10 });
+  });
+
+  it("combinada é a média simples entre a minha e a dos colegas", () => {
+    expect(combinarNotas({ "1": 10, "3": 7 }, { "1": 8.5, "2": 6 })).toEqual({ "1": 9.25, "2": 6, "3": 7 });
+    expect(notasInteiras({ "1": 9.25, "2": 6.5 })).toEqual({ "1": 9, "2": 7 });
+    expect(classificar(8.5)).toBe("Excepcional");
   });
 });
 

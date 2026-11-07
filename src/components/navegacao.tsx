@@ -37,6 +37,7 @@ const ITENS_GESTAO = [
 
 const ITENS_DESEMPENHO = [
   { href: "/desempenho", rotulo: "Painel da equipe", icone: ChartNoAxesCombined },
+  { href: "/desempenho/colegas", rotulo: "Avaliação pelos colegas", icone: UsersRound },
   { href: "/gestao", rotulo: "Gestão", icone: LayoutDashboard },
 ] as const;
 
@@ -54,6 +55,9 @@ export function Navegacao() {
   const noDesempenho = pathname.startsWith("/desempenho");
   const naEntrada = pathname === "/";
   const itens = noDesempenho ? ITENS_DESEMPENHO : naGestao ? ITENS_GESTAO : ITENS_ESCALAS;
+
+  // Link de formulário enviado aos colegas: nenhuma navegação para o resto do sistema.
+  if (pathname.startsWith("/avaliar")) return null;
 
   return (
     <header className="sem-impressao sticky top-0 z-40 border-b bg-background/95 backdrop-blur">

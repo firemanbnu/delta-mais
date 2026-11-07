@@ -91,3 +91,34 @@ export function Indicador({
     </div>
   );
 }
+
+/** Abas de visão (minha / colegas / combinada / comparar) mantendo o ciclo. */
+export function SeletorVisao({
+  base,
+  ciclo,
+  atual,
+  opcoes,
+}: {
+  base: string;
+  ciclo: number;
+  atual: string;
+  opcoes: { valor: string; rotulo: string; dica?: string }[];
+}) {
+  return (
+    <nav aria-label="Visão das notas" className="sem-impressao flex flex-wrap gap-1 rounded-lg border bg-muted/40 p-1">
+      {opcoes.map((o) => (
+        <a
+          key={o.valor}
+          href={`${base}?ciclo=${ciclo}&visao=${o.valor}`}
+          title={o.dica}
+          aria-current={o.valor === atual ? "page" : undefined}
+          className={`rounded-md px-3 py-1 text-sm ${
+            o.valor === atual ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {o.rotulo}
+        </a>
+      ))}
+    </nav>
+  );
+}

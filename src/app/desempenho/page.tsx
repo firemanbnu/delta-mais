@@ -1,16 +1,23 @@
 import Link from "next/link";
-import { ChevronRight, ClipboardPen, FileSpreadsheet, Lightbulb, Users } from "lucide-react";
+import { ChevronRight, ClipboardPen, FileSpreadsheet, Lightbulb, Users, UsersRound } from "lucide-react";
 
-import { BarraNota, Indicador, SeloNota, corNota } from "@/components/desempenho/comum";
+import { BarraNota, Indicador, SeletorVisao, SeloNota, corNota } from "@/components/desempenho/comum";
 import { NoveBox, type PessoaNoveBox } from "@/components/desempenho/nove-box";
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
 import { Button } from "@/components/ui/button";
 import { ciclosComAvaliacao, cicloAtual, lerCiclo, listarAvaliados } from "@/db/desempenho";
+import { listarConvites, respostasColegas } from "@/db/desempenho-pares";
 import { exigirGestao } from "@/lib/acesso-gestao";
 import {
   ACOES_COMPETENCIA,
   ACOES_PILAR,
   COMPETENCIAS,
+  DESCRICAO_VISAO,
+  MIN_RESPOSTAS_COLEGAS,
+  ROTULO_VISAO,
+  VISOES,
+  lerVisao,
+  notasNaVisao,
   PILARES,
   ROTINAS_GESTAO,
   ROTULO_PILAR,
@@ -31,9 +38,21 @@ export const metadata = { title: "Avaliação de desempenho" };
 export default async function PainelDesempenho({ searchParams }: PageProps<"/desempenho">) {
   const busca = await searchParams;
   const ciclo = lerCiclo(busca.ciclo);
+  const visao = lerVisao(busca.visao);
   await exigirGestao(`/desempenho?ciclo=${ciclo}`);
 
-  const [membros, ciclos] = await Promise.all([listarAvaliados(ciclo), ciclosComAvaliacao()]);
+  const [membrosBase, ciclos, respostas, convites] = await Promise.all([
+    listarAvaliados(ciclo),
+    ciclosComAvaliacao(),
+    respostasColegas(ciclo),
+    listarConvites(ciclo),
+  ]);
+  const membros = membrosBase.map((m) => ({
+    ...m,
+    notas: notasNaVisao(m.notas, respostas.get(m.pessoa.id) ?? [], visao),
+    respostas: respostas.get(m.pessoa.id)?.length ?? 0,
+  }));
+  const respondidos = convites.filter((c) => c.convite.respondidoEm).length;
   const opcoesCiclo = [...new Set([cicloAtual(), ciclo, ...ciclos])].sort((a, b) => b - a);
 
   const pessoas = membros.map((m) => ({
@@ -69,7 +88,7 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
             {opcoesCiclo.map((c) => (
               <Link
                 key={c}
-                href={`/desempenho?ciclo=${c}`}
+                href={`/desempenho?ciclo=${c}&visao=${visao}`}
                 aria-current={c === ciclo ? "page" : undefined}
                 className={`rounded-md px-2.5 py-1 text-sm ${
                   c === ciclo ? "bg-secondary font-medium" : "text-muted-foreground hover:bg-secondary/60"
@@ -79,11 +98,14 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
               </Link>
             ))}
           </nav>
+          <Button size="sm" variant="outline" render={<Link href={`/desempenho/colegas?ciclo=${ciclo}`} />}>
+            <UsersRound data-icon="inline-start" />
+            Avaliação pelos colegas
+          </Button>
           <Button
             size="sm"
             variant="outline"
-            render={<a href={`/desempenho/exportar?ciclo=${ciclo}`} download />}
-            disabled={comNotas.length === 0}
+            render={<a href={`/desempenho/exportar?ciclo=${ciclo}&visao=${visao}`} download />}
           >
             <FileSpreadsheet data-icon="inline-start" />
             Planilha da empresa (.xlsx)
@@ -91,6 +113,19 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
           <BotaoImprimir />
         </div>
       </header>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <SeletorVisao
+          base="/desempenho"
+          ciclo={ciclo}
+          atual={visao}
+          opcoes={VISOES.map((v) => ({ valor: v, rotulo: ROTULO_VISAO[v], dica: DESCRICAO_VISAO[v] }))}
+        />
+        <p className="text-xs text-muted-foreground">
+          {DESCRICAO_VISAO[visao]}
+          {convites.length > 0 ? ` Colegas: ${respondidos} de ${convites.length} responderam.` : ""}
+        </p>
+      </div>
 
       <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Indicador
@@ -127,7 +162,7 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
           <Users className="size-4" aria-hidden /> Integrantes
         </h2>
         <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {membros.map(({ pessoa, notas }) => {
+          {membros.map(({ pessoa, notas, respostas: nRespostas }) => {
             const media = mediaGeral(notas);
             const feitos = preenchidas(notas);
             const q = quadrante9Box(notas);
@@ -139,11 +174,22 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
                   {formatarNota(media)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/desempenho/${pessoa.id}?ciclo=${ciclo}`} className="block truncate font-medium hover:underline">
+                  <Link
+                    href={`/desempenho/${pessoa.id}?ciclo=${ciclo}&visao=${visao}`}
+                    className="block truncate font-medium hover:underline"
+                  >
                     {pessoa.nome}
                   </Link>
                   <p className="truncate text-xs text-muted-foreground">
-                    {[pessoa.funcao, feitos === 0 ? "não avaliado" : `${feitos}/${COMPETENCIAS.length} itens`, q?.titulo]
+                    {[
+                      pessoa.funcao,
+                      feitos === 0
+                        ? visao === "colegas" && nRespostas < MIN_RESPOSTAS_COLEGAS
+                          ? `${nRespostas} resposta(s) de colegas`
+                          : "não avaliado"
+                        : `${feitos}/${COMPETENCIAS.length} itens`,
+                      q?.titulo,
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
@@ -163,7 +209,7 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
                   <ClipboardPen className="size-4" />
                 </Link>
                 <Link
-                  href={`/desempenho/${pessoa.id}?ciclo=${ciclo}`}
+                  href={`/desempenho/${pessoa.id}?ciclo=${ciclo}&visao=${visao}`}
                   aria-label={`Painel de ${pessoa.nome}`}
                   className="sem-impressao inline-flex size-9 items-center justify-center rounded-md hover:bg-secondary"
                 >
@@ -183,8 +229,9 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
 
       {comNotas.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Nenhuma avaliação no ciclo {ciclo}. Clique no ícone de prancheta ao lado de um nome para preencher
-          o formulário; os painéis e as sugestões aparecem conforme as notas são lançadas.
+          {visao === "minha"
+            ? `Nenhuma avaliação no ciclo ${ciclo}. Clique no ícone de prancheta ao lado de um nome para preencher o formulário; os painéis e as sugestões aparecem conforme as notas são lançadas.`
+            : `Ainda não há notas suficientes nesta visão. A média dos colegas aparece quando cada pessoa tem pelo menos ${MIN_RESPOSTAS_COLEGAS} respostas.`}
         </p>
       ) : (
         <>
@@ -218,7 +265,7 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
                   {comNotas.map(({ pessoa, notas }) => (
                     <tr key={pessoa.id}>
                       <th className="sticky left-0 z-10 whitespace-nowrap border-b bg-background px-2 py-1 text-left font-normal">
-                        <Link href={`/desempenho/${pessoa.id}?ciclo=${ciclo}`} className="hover:underline">
+                        <Link href={`/desempenho/${pessoa.id}?ciclo=${ciclo}&visao=${visao}`} className="hover:underline">
                           {pessoa.nomeGuerra ?? pessoa.nome}
                         </Link>
                       </th>
@@ -227,10 +274,10 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
                         return (
                           <td
                             key={c.numero}
-                            title={`${pessoa.nomeGuerra ?? pessoa.nome} · ${c.competencia}: ${n ?? "sem nota"}`}
+                            title={`${pessoa.nomeGuerra ?? pessoa.nome} · ${c.competencia}: ${n === null ? "sem nota" : formatarNota(n)}`}
                             className={`border-b border-l text-center tabular-nums ${corNota(n)}`}
                           >
-                            {n ?? ""}
+                            {n === null ? "" : Number.isInteger(n) ? n : formatarNota(n)}
                           </td>
                         );
                       })}

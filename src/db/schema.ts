@@ -11,6 +11,7 @@ import {
   time,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 import { FUNCOES, NOITES_DE_SERVICO } from "../lib/dominio";
@@ -315,6 +316,8 @@ export const efetivo = pgTable(
     situacao: enumSituacaoEfetivo("situacao").notNull().default("ATIVO"),
     /** Nome da pasta da pessoa no Drive "Controle Documentos". */
     pastaDrive: text("pasta_drive"),
+    /** WhatsApp (com DDD), usado para enviar links de formulários. */
+    telefone: text("telefone"),
     observacoes: text("observacoes"),
     atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -393,6 +396,56 @@ export const avaliacoesDesempenho = pgTable(
   ],
 );
 
+/**
+ * Avaliação pelos colegas (anônima). A rodada define quem aparece no
+ * formulário; cada convite é um link de uso único para um respondente.
+ */
+export const avaliacoesParesRodadas = pgTable("avaliacoes_pares_rodadas", {
+  ciclo: integer("ciclo").primaryKey(),
+  /** Ids do efetivo avaliados no formulário (o respondente não avalia a si mesmo). */
+  avaliados: jsonb("avaliados").$type<number[]>().notNull().default([]),
+  criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const avaliacoesParesConvites = pgTable(
+  "avaliacoes_pares_convites",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    ciclo: integer("ciclo").notNull(),
+    efetivoId: integer("efetivo_id")
+      .notNull()
+      .references(() => efetivo.id, { onDelete: "cascade" }),
+    token: text("token").notNull(),
+    /** Hash do segredo do aparelho que abriu o link primeiro. */
+    aparelhoHash: text("aparelho_hash"),
+    abertoEm: timestamp("aberto_em", { withTimezone: true }),
+    respondidoEm: timestamp("respondido_em", { withTimezone: true }),
+    revogadoEm: timestamp("revogado_em", { withTimezone: true }),
+    criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("avaliacoes_pares_convites_token_idx").on(t.token),
+    index("avaliacoes_pares_convites_ciclo_idx").on(t.ciclo),
+  ],
+);
+
+/**
+ * Notas dadas pelos colegas. Propositalmente sem respondente, sem convite e
+ * sem horário: não há como ligar uma resposta a quem respondeu.
+ */
+export const avaliacoesParesNotas = pgTable(
+  "avaliacoes_pares_notas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ciclo: integer("ciclo").notNull(),
+    avaliadoId: integer("avaliado_id")
+      .notNull()
+      .references(() => efetivo.id, { onDelete: "cascade" }),
+    notas: jsonb("notas").$type<Record<string, number>>().notNull().default({}),
+  },
+  (t) => [index("avaliacoes_pares_notas_ciclo_avaliado_idx").on(t.ciclo, t.avaliadoId)],
+);
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   people: many(people),
 }));
@@ -436,6 +489,7 @@ export type Efetivo = typeof efetivo.$inferSelect;
 export type TipoDocumento = typeof tiposDocumento.$inferSelect;
 export type DocumentoPessoa = typeof documentosPessoa.$inferSelect;
 export type AvaliacaoDesempenho = typeof avaliacoesDesempenho.$inferSelect;
+export type ConvitePares = typeof avaliacoesParesConvites.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
