@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { BookCheck, ChevronRight, FileBarChart, FileCheck2, LogOut, UsersRound } from "lucide-react";
+import {
+  BookCheck,
+  ChartNoAxesCombined,
+  ChevronRight,
+  FileBarChart,
+  FileCheck2,
+  LogOut,
+  UsersRound,
+} from "lucide-react";
 
 import { sairGestaoAction } from "@/app/acoes/gestao";
 import {
@@ -58,6 +66,12 @@ export default async function Gestao() {
       titulo: "Efetivo",
       descricao: "Pessoas, equipes, funções e situação.",
       icone: UsersRound,
+    },
+    {
+      href: "/desempenho",
+      titulo: "Avaliação de desempenho",
+      descricao: "Formulário da empresa, painéis e sugestões para a Equipe Delta.",
+      icone: ChartNoAxesCombined,
     },
   ];
 

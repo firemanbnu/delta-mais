@@ -6,6 +6,7 @@ import {
   BookCheck,
   CalendarDays,
   CalendarRange,
+  ChartNoAxesCombined,
   FileBarChart,
   FileCheck2,
   Flame,
@@ -34,6 +35,11 @@ const ITENS_GESTAO = [
   { href: "/gestao/efetivo", rotulo: "Efetivo", icone: UsersRound },
 ] as const;
 
+const ITENS_DESEMPENHO = [
+  { href: "/desempenho", rotulo: "Painel da equipe", icone: ChartNoAxesCombined },
+  { href: "/gestao", rotulo: "Gestão", icone: LayoutDashboard },
+] as const;
+
 /** Item ativo: a rota exata ou uma subrota dela, sem confundir "/gestao" com as filhas. */
 function itemAtivo(pathname: string, href: string, itens: readonly { href: string }[]): boolean {
   if (pathname === href) return true;
@@ -45,8 +51,9 @@ function itemAtivo(pathname: string, href: string, itens: readonly { href: strin
 export function Navegacao() {
   const pathname = usePathname();
   const naGestao = pathname.startsWith("/gestao");
+  const noDesempenho = pathname.startsWith("/desempenho");
   const naEntrada = pathname === "/";
-  const itens = naGestao ? ITENS_GESTAO : ITENS_ESCALAS;
+  const itens = noDesempenho ? ITENS_DESEMPENHO : naGestao ? ITENS_GESTAO : ITENS_ESCALAS;
 
   return (
     <header className="sem-impressao sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -56,7 +63,11 @@ export function Navegacao() {
           <span>
             Delta Mais
             <span className="ml-2 hidden text-xs font-normal text-muted-foreground sm:inline">
-              {naGestao ? "gestão do efetivo" : "plantão noturno 12x36"}
+              {noDesempenho
+                ? "avaliação de desempenho"
+                : naGestao
+                  ? "gestão do efetivo"
+                  : "plantão noturno 12x36"}
             </span>
           </span>
         </Link>

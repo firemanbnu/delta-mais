@@ -45,9 +45,23 @@ export async function gestaoLiberada(): Promise<boolean> {
   return Boolean(valor && iguais(valor, assinatura(senha)));
 }
 
-/** Usar no topo das páginas e ações da Gestão. */
-export async function exigirGestao(): Promise<void> {
-  if (!(await gestaoLiberada())) redirect("/gestao/entrar");
+/** Caminho interno para onde voltar depois de entrar (evita redirecionar para fora). */
+export function destinoSeguro(valor: unknown): string | null {
+  const texto = typeof valor === "string" ? valor : Array.isArray(valor) ? valor[0] : null;
+  if (typeof texto !== "string" || !texto.startsWith("/") || texto.startsWith("//") || texto.includes("\\")) {
+    return null;
+  }
+  return texto;
+}
+
+/**
+ * Usar no topo das páginas e ações da Gestão e da Avaliação de desempenho.
+ * `volta`: página para onde ir depois de digitar a senha.
+ */
+export async function exigirGestao(volta?: string): Promise<void> {
+  if (await gestaoLiberada()) return;
+  const destino = destinoSeguro(volta);
+  redirect(destino ? `/gestao/entrar?volta=${encodeURIComponent(destino)}` : "/gestao/entrar");
 }
 
 export async function abrirSessaoGestao(): Promise<void> {

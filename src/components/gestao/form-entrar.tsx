@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function FormEntrar() {
+export function FormEntrar({ volta }: { volta?: string | null }) {
   const [estado, enviar, pendente] = useActionState(entrarGestaoAction, null);
 
   return (
     <form action={enviar} className="space-y-4">
+      {volta ? <input type="hidden" name="volta" value={volta} /> : null}
       <div className="space-y-1.5">
         <Label htmlFor="senha">Senha da Gestão</Label>
         <Input id="senha" name="senha" type="password" autoComplete="current-password" required autoFocus />

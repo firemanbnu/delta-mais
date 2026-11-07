@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 
 import { FormEntrar } from "@/components/gestao/form-entrar";
-import { gestaoConfigurada, gestaoLiberada } from "@/lib/acesso-gestao";
+import { destinoSeguro, gestaoConfigurada, gestaoLiberada } from "@/lib/acesso-gestao";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Entrar na Gestão" };
 
-export default async function EntrarGestao() {
-  if (await gestaoLiberada()) redirect("/gestao");
+export default async function EntrarGestao({ searchParams }: PageProps<"/gestao/entrar">) {
+  const volta = destinoSeguro((await searchParams).volta);
+  if (await gestaoLiberada()) redirect(volta ?? "/gestao");
   const configurada = gestaoConfigurada();
 
   return (
@@ -22,7 +23,7 @@ export default async function EntrarGestao() {
       </p>
       <div className="mt-6">
         {configurada ? (
-          <FormEntrar />
+          <FormEntrar volta={volta} />
         ) : (
           <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
             A senha ainda não foi definida. Na Vercel, em Settings → Environment Variables, crie a

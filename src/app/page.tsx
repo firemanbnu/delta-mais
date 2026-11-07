@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarRange, ChevronRight, ClipboardList, Lock } from "lucide-react";
+import { CalendarRange, ChartNoAxesCombined, ChevronRight, ClipboardList, Lock } from "lucide-react";
 
 import { lerConfiguracoes } from "@/db/repositorio";
 import {
@@ -44,16 +44,25 @@ export default async function Entrada() {
       icone: ClipboardList,
       cor: "text-sky-500 bg-sky-500/10",
     },
+    {
+      href: "/desempenho",
+      titulo: "Avaliação de desempenho",
+      descricao:
+        "Formulário da empresa para a Equipe Delta, painéis individuais e da equipe e sugestões de desenvolvimento.",
+      detalhe: "Área protegida por senha.",
+      icone: ChartNoAxesCombined,
+      cor: "text-emerald-500 bg-emerald-500/10",
+    },
   ];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <header>
         <p className="text-sm text-muted-foreground">SESCINC SBNF · Equipe Delta</p>
         <h1 className="text-2xl font-semibold tracking-tight">No que você vai trabalhar?</h1>
       </header>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {areas.map(({ href, titulo, descricao, detalhe, icone: Icone, cor }) => (
           <Link
             key={href}
@@ -72,7 +81,7 @@ export default async function Entrada() {
             </span>
             <span className="mt-1 text-sm text-muted-foreground">{descricao}</span>
             <span className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-              {href === "/gestao" ? <Lock className="size-3" aria-hidden /> : null}
+              {href !== "/plantao" ? <Lock className="size-3" aria-hidden /> : null}
               {detalhe}
             </span>
           </Link>
