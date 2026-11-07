@@ -50,6 +50,13 @@
       "when": 1794017705093,
       "tag": "0006_avaliacao_desempenho",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794044993542,
+      "tag": "0007_avaliacao_pares",
+      "breakpoints": true
     }
   ]
 }
