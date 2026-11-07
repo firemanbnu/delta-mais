@@ -10,6 +10,7 @@ import { getDb } from "@/db";
 import { documentosPessoa, efetivo, tiposDocumento } from "@/db/schema";
 import {
   abrirSessaoGestao,
+  destinoSeguro,
   encerrarSessaoGestao,
   exigirGestao,
   gestaoConfigurada,
@@ -55,7 +56,7 @@ export async function entrarGestaoAction(_estado: unknown, dados: FormData): Pro
   await new Promise((r) => setTimeout(r, 400));
   if (!senhaConfere(senha)) return { ok: false, erro: "Senha incorreta." };
   await abrirSessaoGestao();
-  redirect("/gestao");
+  redirect(destinoSeguro(dados.get("volta")) ?? "/gestao");
 }
 
 export async function sairGestaoAction(): Promise<void> {

@@ -4,6 +4,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -366,6 +367,32 @@ export const documentosPessoa = pgTable(
   ],
 );
 
+/**
+ * Avaliação de desempenho: uma por pessoa e ciclo (ano). As notas ficam por
+ * número do item da planilha da empresa (1 a 24, sem o 6).
+ */
+export const avaliacoesDesempenho = pgTable(
+  "avaliacoes_desempenho",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    efetivoId: integer("efetivo_id")
+      .notNull()
+      .references(() => efetivo.id, { onDelete: "cascade" }),
+    ciclo: integer("ciclo").notNull(),
+    notas: jsonb("notas").$type<Record<string, number>>().notNull().default({}),
+    /** Anotações do avaliador (fatos observados). Não vão para a planilha. */
+    observacoes: text("observacoes"),
+    /** Plano de desenvolvimento combinado com a pessoa. Não vai para a planilha. */
+    planoAcao: text("plano_acao"),
+    dataAvaliacao: date("data_avaliacao"),
+    atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("avaliacoes_desempenho_efetivo_ciclo_idx").on(t.efetivoId, t.ciclo),
+    index("avaliacoes_desempenho_ciclo_idx").on(t.ciclo),
+  ],
+);
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   people: many(people),
 }));
@@ -408,6 +435,7 @@ export const radioExcecaoRelations = relations(radioExcecao, ({ one }) => ({
 export type Efetivo = typeof efetivo.$inferSelect;
 export type TipoDocumento = typeof tiposDocumento.$inferSelect;
 export type DocumentoPessoa = typeof documentosPessoa.$inferSelect;
+export type AvaliacaoDesempenho = typeof avaliacoesDesempenho.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
