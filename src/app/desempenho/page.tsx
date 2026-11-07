@@ -2,11 +2,13 @@ import Link from "next/link";
 import { ChevronRight, ClipboardPen, FileSpreadsheet, Lightbulb, Users, UsersRound } from "lucide-react";
 
 import { BarraNota, Indicador, SeletorVisao, SeloNota, corNota } from "@/components/desempenho/comum";
+import { IncluirPessoa } from "@/components/desempenho/incluir-pessoa";
 import { NoveBox, type PessoaNoveBox } from "@/components/desempenho/nove-box";
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
 import { Button } from "@/components/ui/button";
 import { ciclosComAvaliacao, cicloAtual, lerCiclo, listarAvaliados } from "@/db/desempenho";
 import { listarConvites, respostasColegas } from "@/db/desempenho-pares";
+import { listarEfetivo } from "@/db/gestao";
 import { exigirGestao } from "@/lib/acesso-gestao";
 import {
   ACOES_COMPETENCIA,
@@ -41,12 +43,17 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
   const visao = lerVisao(busca.visao);
   await exigirGestao(`/desempenho?ciclo=${ciclo}`);
 
-  const [membrosBase, ciclos, respostas, convites] = await Promise.all([
+  const [membrosBase, ciclos, respostas, convites, efetivoTodo] = await Promise.all([
     listarAvaliados(ciclo),
     ciclosComAvaliacao(),
     respostasColegas(ciclo),
     listarConvites(ciclo),
+    listarEfetivo(),
   ]);
+  const naLista = new Set(membrosBase.map((m) => m.pessoa.id));
+  const outros = efetivoTodo
+    .filter((p) => p.situacao === "ATIVO" && !naLista.has(p.id))
+    .map((p) => ({ id: p.id, nome: p.nome, detalhe: [p.funcao, p.equipe].filter(Boolean).join(" · ") }));
   const membros = membrosBase.map((m) => ({
     ...m,
     notas: notasNaVisao(m.notas, respostas.get(m.pessoa.id) ?? [], visao),
@@ -158,9 +165,12 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
 
       {/* Lista de pessoas */}
       <section className="mt-6">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          <Users className="size-4" aria-hidden /> Integrantes
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <Users className="size-4" aria-hidden /> Integrantes
+          </h2>
+          <IncluirPessoa ciclo={ciclo} opcoes={outros} />
+        </div>
         <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {membros.map(({ pessoa, notas, respostas: nRespostas }) => {
             const media = mediaGeral(notas);
@@ -183,6 +193,7 @@ export default async function PainelDesempenho({ searchParams }: PageProps<"/des
                   <p className="truncate text-xs text-muted-foreground">
                     {[
                       pessoa.funcao,
+                      pessoa.equipe && pessoa.equipe !== "DELTA" ? `Equipe ${pessoa.equipe}` : null,
                       feitos === 0
                         ? visao === "colegas" && nRespostas < MIN_RESPOSTAS_COLEGAS
                           ? `${nRespostas} resposta(s) de colegas`
