@@ -93,3 +93,19 @@ export async function excluirAvaliacaoAction(efetivoId: number, ciclo: number): 
     return { ok: false, erro: erro instanceof Error ? erro.message : "Não foi possível apagar." };
   }
 }
+
+/** Inclui no ciclo alguém de fora da Delta (ex.: ferista que trabalha com a equipe). */
+export async function incluirNaAvaliacaoAction(efetivoId: number, ciclo: number): Promise<Resultado> {
+  await exigirGestao();
+  if (!Number.isInteger(efetivoId) || !Number.isInteger(ciclo)) return { ok: false, erro: "Dados inválidos." };
+  try {
+    await getDb()
+      .insert(avaliacoesDesempenho)
+      .values({ efetivoId, ciclo, notas: {} })
+      .onConflictDoNothing({ target: [avaliacoesDesempenho.efetivoId, avaliacoesDesempenho.ciclo] });
+    revalidatePath("/desempenho", "layout");
+    return { ok: true, mensagem: "Pessoa incluída na avaliação." };
+  } catch (erro) {
+    return { ok: false, erro: erro instanceof Error ? erro.message : "Não foi possível incluir." };
+  }
+}
