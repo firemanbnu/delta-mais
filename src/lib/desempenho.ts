@@ -18,7 +18,8 @@ export const NOTA_MAX = 10;
 /** Mesmo rótulo da coluna "Classificação" da planilha. */
 export function classificar(nota: number | null | undefined): string | null {
   if (nota === null || nota === undefined) return null;
-  return ESCALA_NOTAS.find((e) => e.nota === nota)?.rotulo ?? null;
+  const inteira = Number.isInteger(nota) ? nota : arredondarExcel(nota);
+  return ESCALA_NOTAS.find((e) => e.nota === inteira)?.rotulo ?? null;
 }
 
 /** ROUND do Excel (meio para cima), usado na classificação da média. */
@@ -28,7 +29,8 @@ export function arredondarExcel(valor: number): number {
 
 export function notaDe(notas: Notas, numero: number): number | null {
   const v = notas[String(numero)];
-  return typeof v === "number" && Number.isInteger(v) && v >= NOTA_MIN && v <= NOTA_MAX ? v : null;
+  // Notas do avaliador são inteiras; médias dos colegas podem ter casas decimais.
+  return typeof v === "number" && Number.isFinite(v) && v >= NOTA_MIN && v <= NOTA_MAX ? v : null;
 }
 
 function media(valores: number[]): number | null {
@@ -61,6 +63,75 @@ export function mediasPorPilar(notas: Notas): Record<Pilar, number | null> {
         .map((c) => notaDe(notas, c.numero))
         .filter((n): n is number => n !== null),
     );
+  }
+  return saida;
+}
+
+/* ------------------------------------------------- Avaliação pelos colegas */
+
+/**
+ * Mínimo de respostas para mostrar a média dos colegas de alguém. Com uma só
+ * resposta daria para deduzir quem respondeu.
+ */
+export const MIN_RESPOSTAS_COLEGAS = 2;
+
+export const VISOES = ["minha", "colegas", "combinada"] as const;
+export type Visao = (typeof VISOES)[number];
+
+export const ROTULO_VISAO: Record<Visao, string> = {
+  minha: "Minha avaliação",
+  colegas: "Média dos colegas",
+  combinada: "Combinada",
+};
+
+export const DESCRICAO_VISAO: Record<Visao, string> = {
+  minha: "Só as notas que você deu.",
+  colegas: `Média anônima das notas dadas pelos colegas (mínimo de ${MIN_RESPOSTAS_COLEGAS} respostas por pessoa).`,
+  combinada: "Metade sua nota, metade a média dos colegas, item a item.",
+};
+
+export function lerVisao(valor: unknown): Visao {
+  const v = Array.isArray(valor) ? valor[0] : valor;
+  return VISOES.includes(v as Visao) ? (v as Visao) : "minha";
+}
+
+/** Média item a item de várias avaliações (ex.: respostas dos colegas). */
+export function mediaDasNotas(lista: Notas[]): Notas {
+  const saida: Notas = {};
+  for (const c of COMPETENCIAS) {
+    const valores = lista.map((n) => notaDe(n, c.numero)).filter((v): v is number => v !== null);
+    const m = media(valores);
+    if (m !== null) saida[String(c.numero)] = m;
+  }
+  return saida;
+}
+
+/** Média simples entre duas avaliações, item a item (usa a que existir). */
+export function combinarNotas(a: Notas, b: Notas): Notas {
+  const saida: Notas = {};
+  for (const c of COMPETENCIAS) {
+    const va = notaDe(a, c.numero);
+    const vb = notaDe(b, c.numero);
+    const m = media([va, vb].filter((v): v is number => v !== null));
+    if (m !== null) saida[String(c.numero)] = m;
+  }
+  return saida;
+}
+
+/** Notas de uma pessoa na visão escolhida. */
+export function notasNaVisao(minha: Notas, respostasColegas: Notas[], visao: Visao): Notas {
+  const colegas = respostasColegas.length >= MIN_RESPOSTAS_COLEGAS ? mediaDasNotas(respostasColegas) : {};
+  if (visao === "minha") return minha;
+  if (visao === "colegas") return colegas;
+  return combinarNotas(minha, colegas);
+}
+
+/** Nota inteira para a planilha da empresa (ROUND do Excel). */
+export function notasInteiras(notas: Notas): Notas {
+  const saida: Notas = {};
+  for (const c of COMPETENCIAS) {
+    const v = notaDe(notas, c.numero);
+    if (v !== null) saida[String(c.numero)] = arredondarExcel(v);
   }
   return saida;
 }

@@ -2,17 +2,25 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ClipboardPen, Lightbulb, MessagesSquare, Sparkles, Target } from "lucide-react";
 
-import { BarraNota, Indicador, SeloNota, corNota } from "@/components/desempenho/comum";
+import { BarraNota, Indicador, SeletorVisao, SeloNota, corNota } from "@/components/desempenho/comum";
 import { NoveBox } from "@/components/desempenho/nove-box";
 import { Radar } from "@/components/desempenho/radar";
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
 import { BotaoLink } from "@/components/ui/link-button";
 import { dataBR } from "@/components/gestao/comum";
 import { historicoAvaliacoes, lerCiclo, listarAvaliados, obterPessoa } from "@/db/desempenho";
+import { respostasColegas } from "@/db/desempenho-pares";
 import { exigirGestao } from "@/lib/acesso-gestao";
 import {
   ACOES_COMPETENCIA,
   COMPETENCIAS,
+  DESCRICAO_VISAO,
+  MIN_RESPOSTAS_COLEGAS,
+  ROTULO_VISAO,
+  VISOES,
+  lerVisao,
+  mediaDasNotas,
+  notasNaVisao,
   PILARES,
   ROTULO_PILAR,
   analisarEquipe,
@@ -34,21 +42,34 @@ export const metadata = { title: "Painel individual · Desempenho" };
 
 export default async function PainelIndividual({ params, searchParams }: PageProps<"/desempenho/[id]">) {
   const id = Number((await params).id);
-  const ciclo = lerCiclo((await searchParams).ciclo);
+  const busca = await searchParams;
+  const ciclo = lerCiclo(busca.ciclo);
+  const comparar = (Array.isArray(busca.visao) ? busca.visao[0] : busca.visao) === "comparar";
+  const visao = comparar ? "combinada" : lerVisao(busca.visao);
   await exigirGestao(`/desempenho/${id}?ciclo=${ciclo}`);
   if (!Number.isInteger(id) || id <= 0) notFound();
 
-  const [pessoa, membros, historico] = await Promise.all([
+  const [pessoa, membros, historico, respostas] = await Promise.all([
     obterPessoa(id),
     listarAvaliados(ciclo),
     historicoAvaliacoes(id),
+    respostasColegas(ciclo),
   ]);
   if (!pessoa) notFound();
 
   const atual = historico.find((h) => h.ciclo === ciclo) ?? null;
-  const notas = (atual?.notas ?? {}) as Notas;
+  const minhas = (atual?.notas ?? {}) as Notas;
+  const respostasPessoa = respostas.get(id) ?? [];
+  const colegasSuficientes = respostasPessoa.length >= MIN_RESPOSTAS_COLEGAS;
+  const mediaColegas = colegasSuficientes ? mediaDasNotas(respostasPessoa) : {};
+  const notas = notasNaVisao(minhas, respostasPessoa, visao);
   const analise = analisarEquipe(
-    membros.map((m) => ({ id: m.pessoa.id, nome: m.pessoa.nome, nomeGuerra: m.pessoa.nomeGuerra, notas: m.notas })),
+    membros.map((m) => ({
+      id: m.pessoa.id,
+      nome: m.pessoa.nome,
+      nomeGuerra: m.pessoa.nomeGuerra,
+      notas: notasNaVisao(m.notas, respostas.get(m.pessoa.id) ?? [], visao),
+    })),
   );
   const media = mediaGeral(notas);
   const feitos = preenchidas(notas);
@@ -58,7 +79,7 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
   const q = quadrante9Box(notas);
 
   const mediasPessoas = membros
-    .map((m) => ({ id: m.pessoa.id, media: mediaGeral(m.notas) }))
+    .map((m) => ({ id: m.pessoa.id, media: mediaGeral(notasNaVisao(m.notas, respostas.get(m.pessoa.id) ?? [], visao)) }))
     .filter((m): m is { id: number; media: number } => m.media !== null)
     .sort((a, b) => b.media - a.media);
   const posicao = mediasPessoas.findIndex((m) => m.id === id) + 1;
@@ -68,7 +89,7 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <Link
-        href={`/desempenho?ciclo=${ciclo}`}
+        href={`/desempenho?ciclo=${ciclo}&visao=${visao}`}
         className="sem-impressao inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden />
@@ -89,15 +110,38 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
         <div className="sem-impressao flex flex-wrap gap-2">
           <BotaoLink href={`/desempenho/${id}/avaliar?ciclo=${ciclo}`} size="sm">
             <ClipboardPen data-icon="inline-start" />
-            {feitos ? "Editar avaliação" : "Preencher avaliação"}
+            {preenchidas(minhas) ? "Editar avaliação" : "Preencher avaliação"}
           </BotaoLink>
           {feitos ? <BotaoImprimir /> : null}
         </div>
       </header>
 
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <SeletorVisao
+          base={`/desempenho/${id}`}
+          ciclo={ciclo}
+          atual={comparar ? "comparar" : visao}
+          opcoes={[
+            ...VISOES.map((v) => ({ valor: v as string, rotulo: ROTULO_VISAO[v], dica: DESCRICAO_VISAO[v] })),
+            { valor: "comparar", rotulo: "Comparar", dica: "Sua avaliação lado a lado com a dos colegas" },
+          ]}
+        />
+        <p className="text-xs text-muted-foreground">
+          {respostasPessoa.length} {respostasPessoa.length === 1 ? "resposta" : "respostas"} de colegas
+          {colegasSuficientes ? "" : ` (a média aparece a partir de ${MIN_RESPOSTAS_COLEGAS})`}.
+          {comparar ? " Abaixo da comparação, os painéis usam a visão combinada." : ""}
+        </p>
+      </div>
+
+      {comparar ? (
+        <Comparacao minhas={minhas} colegas={mediaColegas} respostas={respostasPessoa.length} suficientes={colegasSuficientes} />
+      ) : null}
+
       {feitos === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Ainda sem notas no ciclo {ciclo}. Preencha a avaliação para ver o painel e as sugestões.
+          {visao === "minha"
+            ? `Ainda sem notas no ciclo ${ciclo}. Preencha a avaliação para ver o painel e as sugestões.`
+            : "Ainda não há notas suficientes nesta visão."}
         </p>
       ) : (
         <>
@@ -268,7 +312,7 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
                   return (
                     <Link
                       key={h.ciclo}
-                      href={`/desempenho/${id}?ciclo=${h.ciclo}`}
+                      href={`/desempenho/${id}?ciclo=${h.ciclo}&visao=minha`}
                       className={`rounded-lg border px-3 py-2 text-center ${h.ciclo === ciclo ? "ring-2 ring-sky-500" : ""}`}
                     >
                       <p className="text-xs text-muted-foreground">{h.ciclo}</p>
@@ -327,5 +371,132 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
         </>
       )}
     </div>
+  );
+}
+
+function Comparacao({
+  minhas,
+  colegas,
+  respostas,
+  suficientes,
+}: {
+  minhas: Notas;
+  colegas: Notas;
+  respostas: number;
+  suficientes: boolean;
+}) {
+  if (!suficientes) {
+    return (
+      <p className="mt-6 rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+        {respostas === 0 ? "Nenhum colega avaliou esta pessoa ainda." : `Só ${respostas} resposta de colega até agora.`} A
+        comparação aparece com {MIN_RESPOSTAS_COLEGAS} respostas ou mais, para preservar o anonimato.
+      </p>
+    );
+  }
+  const linhas = COMPETENCIAS.map((c) => {
+    const eu = notaDe(minhas, c.numero);
+    const eles = notaDe(colegas, c.numero);
+    return { c, eu, eles, dif: eu !== null && eles !== null ? eles - eu : null };
+  });
+  const comDif = linhas.filter((l) => l.dif !== null);
+  const alinhados = comDif.filter((l) => Math.abs(l.dif ?? 0) < 1).length;
+  const ocultos = comDif.filter((l) => (l.dif ?? 0) >= 2);
+  const atencao = comDif.filter((l) => (l.dif ?? 0) <= -2);
+
+  return (
+    <section className="mt-6 rounded-xl border p-4">
+      <h2 className="text-base font-semibold">Sua avaliação × colegas</h2>
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Indicador rotulo="Sua média" valor={formatarNota(mediaGeral(minhas), 2)} detalhe={classificarMedia(mediaGeral(minhas))} />
+        <Indicador rotulo="Média dos colegas" valor={formatarNota(mediaGeral(colegas), 2)} detalhe={`${respostas} respostas`} />
+        <Indicador
+          rotulo="Concordância"
+          valor={comDif.length ? `${Math.round((alinhados / comDif.length) * 100)}%` : "—"}
+          detalhe="itens com diferença menor que 1 ponto"
+        />
+        <Indicador rotulo="Divergências fortes" valor={String(ocultos.length + atencao.length)} detalhe="diferença de 2 pontos ou mais" />
+      </div>
+      <div className="mt-4 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+        <Radar
+          rotuloValor="Sua avaliação"
+          rotuloReferencia="Média dos colegas"
+          itens={COMPETENCIAS.map((c) => ({
+            rotulo: c.competencia.length > 18 ? `${c.competencia.slice(0, 17)}…` : c.competencia,
+            titulo: `${c.numero}. ${c.competencia}`,
+            valor: notaDe(minhas, c.numero),
+            referencia: notaDe(colegas, c.numero),
+          }))}
+        />
+        <div className="space-y-4 text-sm">
+          <div>
+            <h3 className="font-semibold text-emerald-600">Forças que os colegas veem mais que você</h3>
+            {ocultos.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhuma.</p>
+            ) : (
+              <ul className="mt-1 space-y-1">
+                {ocultos.map((l) => (
+                  <li key={l.c.numero}>
+                    {l.c.competencia}: você {formatarNota(l.eu)}, colegas {formatarNota(l.eles)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">Reconheça e use como referência para a equipe.</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-600">Pontos em que os colegas avaliam abaixo de você</h3>
+            {atencao.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhum.</p>
+            ) : (
+              <ul className="mt-1 space-y-1">
+                {atencao.map((l) => (
+                  <li key={l.c.numero}>
+                    {l.c.competencia}: você {formatarNota(l.eu)}, colegas {formatarNota(l.eles)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pode ser comportamento que o chefe não presencia (ex.: na troca de turno ou sem supervisão). Vale observar
+              e conversar sobre isso no feedback, sem expor quem respondeu.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 font-medium">Nº</th>
+              <th className="px-3 py-2 font-medium">Competência</th>
+              <th className="px-3 py-2 font-medium">Sua nota</th>
+              <th className="px-3 py-2 font-medium">Colegas</th>
+              <th className="px-3 py-2 font-medium">Diferença</th>
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((l) => (
+              <tr key={l.c.numero} className="border-t">
+                <td className="px-3 py-1.5 tabular-nums">{l.c.numero}</td>
+                <td className="px-3 py-1.5">{l.c.competencia}</td>
+                <td className="px-3 py-1.5">
+                  <SeloNota valor={l.eu} />
+                </td>
+                <td className="px-3 py-1.5">
+                  <SeloNota valor={l.eles} />
+                </td>
+                <td
+                  className={`px-3 py-1.5 tabular-nums ${
+                    l.dif === null ? "" : l.dif >= 2 ? "font-semibold text-emerald-600" : l.dif <= -2 ? "font-semibold text-amber-600" : ""
+                  }`}
+                >
+                  {l.dif === null ? "—" : `${l.dif >= 0 ? "+" : "−"}${formatarNota(Math.abs(l.dif))}`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
