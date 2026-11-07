@@ -114,7 +114,7 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
               detalhe={posicao ? `${posicao}º de ${mediasPessoas.length} avaliados` : null}
             />
             <Indicador rotulo="Itens avaliados" valor={`${feitos}/${COMPETENCIAS.length}`} />
-            <Indicador rotulo="Matriz 9-box" valor={q?.titulo ?? "—"} detalhe={q ? "potencial × desempenho" : "falta o item 1"} />
+            <Indicador rotulo="Matriz 9-box" valor={q?.titulo ?? "—"} detalhe={q ? "potencial × desempenho" : "precisa do item 1 e de outras notas"} />
           </section>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
@@ -122,7 +122,7 @@ export default async function PainelIndividual({ params, searchParams }: PagePro
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Perfil de competências</h2>
               <Radar
                 itens={COMPETENCIAS.map((c) => ({
-                  rotulo: c.competencia.length > 16 ? `${c.competencia.slice(0, 15)}…` : c.competencia,
+                  rotulo: c.competencia.length > 18 ? `${c.competencia.slice(0, 17)}…` : c.competencia,
                   titulo: `${c.numero}. ${c.competencia}`,
                   valor: notaDe(notas, c.numero),
                   referencia: analise.mediaPorCompetencia[c.numero],

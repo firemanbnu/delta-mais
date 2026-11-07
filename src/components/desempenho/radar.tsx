@@ -1,20 +1,22 @@
 type ItemRadar = { rotulo: string; titulo?: string; valor: number | null; referencia?: number | null };
 
 /** Radar 0–10 em SVG puro: pessoa (preenchido) e média da equipe (tracejado). */
-export function Radar({ itens, tamanho = 420 }: { itens: ItemRadar[]; tamanho?: number }) {
+export function Radar({ itens }: { itens: ItemRadar[] }) {
   const n = itens.length;
-  const margem = 78;
-  const c = tamanho / 2;
-  const r = c - margem;
+  const largura = 600;
+  const altura = 440;
+  const cx = largura / 2;
+  const c = altura / 2;
+  const r = 160;
   const ang = (i: number) => -Math.PI / 2 + (2 * Math.PI * i) / n;
-  const ponto = (i: number, v: number) => [c + Math.cos(ang(i)) * r * (v / 10), c + Math.sin(ang(i)) * r * (v / 10)];
+  const ponto = (i: number, v: number) => [cx + Math.cos(ang(i)) * r * (v / 10), c + Math.sin(ang(i)) * r * (v / 10)];
   const caminho = (valores: (number | null)[]) =>
     valores.map((v, i) => ponto(i, v ?? 0)).map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ") + " Z";
   const temRef = itens.some((i) => i.referencia !== undefined && i.referencia !== null);
 
   return (
     <figure>
-      <svg viewBox={`0 0 ${tamanho} ${tamanho}`} className="mx-auto h-auto w-full max-w-[460px]" role="img" aria-label="Gráfico radar das competências">
+      <svg viewBox={`0 0 ${largura} ${altura}`} className="mx-auto h-auto w-full max-w-[600px]" role="img" aria-label="Gráfico radar das competências">
         {[2, 4, 6, 8, 10].map((nivel) => (
           <polygon
             key={nivel}
@@ -25,10 +27,10 @@ export function Radar({ itens, tamanho = 420 }: { itens: ItemRadar[]; tamanho?: 
         ))}
         {itens.map((_, i) => {
           const [x, y] = ponto(i, 10);
-          return <line key={i} x1={c} y1={c} x2={x} y2={y} className="stroke-border" strokeWidth={0.6} />;
+          return <line key={i} x1={cx} y1={c} x2={x} y2={y} className="stroke-border" strokeWidth={0.6} />;
         })}
         {[5, 10].map((nivel) => (
-          <text key={nivel} x={c + 3} y={c - (r * nivel) / 10 + 10} className="fill-muted-foreground text-[9px]">
+          <text key={nivel} x={cx + 3} y={c - (r * nivel) / 10 + 10} className="fill-muted-foreground text-[9px]">
             {nivel}
           </text>
         ))}
@@ -47,11 +49,19 @@ export function Radar({ itens, tamanho = 420 }: { itens: ItemRadar[]; tamanho?: 
           ),
         )}
         {itens.map((item, i) => {
-          const [x, y] = ponto(i, 11.3);
+          const [x, y] = ponto(i, 10.8);
           const cos = Math.cos(ang(i));
-          const ancora = Math.abs(cos) < 0.2 ? "middle" : cos > 0 ? "start" : "end";
+          const sin = Math.sin(ang(i));
+          const ancora = Math.abs(cos) < 0.03 ? "middle" : cos > 0 ? "start" : "end";
           return (
-            <text key={i} x={x} y={y} textAnchor={ancora} dominantBaseline="middle" className="fill-foreground text-[9.5px]">
+            <text
+              key={i}
+              x={x + (ancora === "start" ? 3 : ancora === "end" ? -3 : 0)}
+              y={y + sin * 6}
+              textAnchor={ancora}
+              dominantBaseline="middle"
+              className="fill-foreground text-[11px]"
+            >
               <title>{item.titulo ?? item.rotulo}</title>
               {item.rotulo}
             </text>
