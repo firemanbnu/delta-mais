@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 
 import { dataBR } from "@/components/gestao/comum";
+import { CampoDataDocumento } from "@/components/gestao/campo-data-documento";
 import { EditorDocumento } from "@/components/gestao/editor-documento";
 import { SeloStatus } from "@/components/gestao/selo-status";
 import { montarQuadroDocumentos } from "@/db/gestao";
@@ -63,6 +64,10 @@ export default async function FichaDocumentos({ params }: PageProps<"/gestao/doc
               ? `${linha.pendentes} documentos pedem atenção.`
               : "Nenhuma pendência."}
         </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Edite a data direto na coluna Data (salva ao sair do campo ou com Enter). Para mudar a
+          situação, o link do arquivo ou a observação, use o lápis.
+        </p>
       </header>
 
       {GRUPOS_DOCUMENTO.map((grupo) => {
@@ -79,7 +84,7 @@ export default async function FichaDocumentos({ params }: PageProps<"/gestao/doc
                   <tr>
                     <th className="px-3 py-2 font-medium">Documento</th>
                     <th className="px-3 py-2 font-medium">Situação</th>
-                    <th className="hidden px-3 py-2 font-medium sm:table-cell">Data</th>
+                    <th className="px-3 py-2 font-medium">Data</th>
                     <th className="px-3 py-2 font-medium">Vencimento</th>
                     <th className="w-20 px-3 py-2" />
                   </tr>
@@ -101,8 +106,21 @@ export default async function FichaDocumentos({ params }: PageProps<"/gestao/doc
                           </span>
                         ) : null}
                       </td>
-                      <td className="hidden px-3 py-2 tabular-nums sm:table-cell">
-                        {tipo.forma === "ENTREGA" ? "—" : dataBR(registro?.data)}
+                      <td className="px-3 py-1.5 tabular-nums">
+                        {tipo.forma === "ENTREGA" ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <CampoDataDocumento
+                            key={`${tipo.id}-${registro?.data ?? ""}`}
+                            efetivoId={pessoa.id}
+                            tipoId={tipo.id}
+                            tipoNome={tipo.nome}
+                            data={registro?.data ?? null}
+                          />
+                        )}
+                        {tipo.forma === "VENCIMENTO" ? (
+                          <span className="block text-xs text-muted-foreground">vencimento</span>
+                        ) : null}
                       </td>
                       <td className="px-3 py-2 tabular-nums">
                         {dataBR(avaliacao.vencimento)}

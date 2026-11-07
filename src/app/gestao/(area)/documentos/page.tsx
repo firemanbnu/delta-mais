@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AbrirFicha } from "@/components/gestao/abrir-ficha";
+import { EditorDocumento, type DadosEditorDocumento } from "@/components/gestao/editor-documento";
 import { SeloStatus } from "@/components/gestao/selo-status";
 import { dataBR } from "@/components/gestao/comum";
 import { montarQuadroDocumentos, type CelulaDocumento } from "@/db/gestao";
@@ -48,6 +50,20 @@ function Filtro({ ativo, href, children }: { ativo: boolean; href: string; child
 }
 
 /** Texto curto da célula: vencimento quando dá para calcular, senão a data informada. */
+function dadosEditor(pessoaId: number, celula: CelulaDocumento): DadosEditorDocumento {
+  const { tipo, registro } = celula;
+  return {
+    efetivoId: pessoaId,
+    tipoId: tipo.id,
+    tipoNome: tipo.nome,
+    forma: tipo.forma,
+    data: registro?.data ?? null,
+    situacao: registro?.situacao ?? null,
+    arquivoUrl: registro?.arquivoUrl ?? null,
+    observacao: registro?.observacao ?? null,
+  };
+}
+
 function textoCelula(celula: CelulaDocumento): string {
   const { avaliacao, registro, tipo } = celula;
   if (avaliacao.status === "NAO_SE_APLICA") return "NA";
@@ -124,6 +140,7 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
       </p>
 
       <div className="mt-5 flex flex-col gap-2">
+        <AbrirFicha pessoas={quadro.linhas.map((l) => ({ id: l.pessoa.id, nome: l.pessoa.nome }))} />
         <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
           <Filtro ativo={visao === "grade"} href={montarLink(atual, { visao: "grade" })}>
             Grade
@@ -164,12 +181,13 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
                 <th className="px-3 py-2 font-medium">Documento</th>
                 <th className="px-3 py-2 font-medium">Situação</th>
                 <th className="px-3 py-2 font-medium">Vencimento</th>
+                <th className="w-12 px-3 py-2" />
               </tr>
             </thead>
             <tbody>
               {pendencias.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
                     Nenhuma pendência com estes filtros.
                   </td>
                 </tr>
@@ -197,6 +215,13 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
                             : `em ${celula.avaliacao.dias} dias`})
                         </span>
                       ) : null}
+                    </td>
+                    <td className="px-3 py-1.5 text-right">
+                      <EditorDocumento
+                        pessoa={pessoa.nome}
+                        dados={dadosEditor(pessoa.id, celula)}
+                        linkFicha
+                      />
                     </td>
                   </tr>
                 ))
@@ -239,12 +264,18 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
                     .map((celula) => (
                       <td
                         key={celula.tipo.id}
-                        title={`${celula.tipo.nome}: ${ROTULO_STATUS[celula.avaliacao.status]}${
-                          celula.avaliacao.vencimento ? ` · vence ${dataBR(celula.avaliacao.vencimento)}` : ""
-                        }${celula.registro?.observacao ? ` · ${celula.registro.observacao}` : ""}`}
-                        className={`whitespace-nowrap border-b border-l px-2 py-1.5 text-center tabular-nums ${COR_STATUS[celula.avaliacao.status]}`}
+                        className={`whitespace-nowrap border-b border-l p-0 text-center tabular-nums ${COR_STATUS[celula.avaliacao.status]}`}
                       >
-                        {textoCelula(celula)}
+                        <EditorDocumento
+                          pessoa={linha.pessoa.nome}
+                          dados={dadosEditor(linha.pessoa.id, celula)}
+                          celula={textoCelula(celula)}
+                          classeCelula="px-2 py-1.5"
+                          dica={`${celula.tipo.nome}: ${ROTULO_STATUS[celula.avaliacao.status]}${
+                            celula.avaliacao.vencimento ? ` · vence ${dataBR(celula.avaliacao.vencimento)}` : ""
+                          }${celula.registro?.observacao ? ` · ${celula.registro.observacao}` : ""}`}
+                          linkFicha
+                        />
                       </td>
                     ))}
                 </tr>
@@ -257,7 +288,7 @@ export default async function Documentos({ searchParams }: PageProps<"/gestao/do
       <p className="mt-3 text-xs text-muted-foreground">
         Na grade, as datas mostram o vencimento quando a validade está definida; senão, a data
         registrada. C = entregue, D = desatualizado, F = falta, NA = não se aplica, ? = conferir.
-        Clique no nome para ver e editar os documentos da pessoa.
+        Clique numa célula para editar a data ou a situação; clique no nome para abrir a ficha individual da pessoa.
       </p>
     </div>
   );

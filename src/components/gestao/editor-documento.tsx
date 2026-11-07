@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import Link from "next/link";
+import { useActionState, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Pencil } from "lucide-react";
+import { FileUser, Pencil } from "lucide-react";
 
 import { salvarDocumentoAction } from "@/app/acoes/gestao";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,23 @@ export type DadosEditorDocumento = {
   observacao: string | null;
 };
 
-export function EditorDocumento({ dados, pessoa }: { dados: DadosEditorDocumento; pessoa: string }) {
+export function EditorDocumento({
+  dados,
+  pessoa,
+  celula,
+  classeCelula,
+  dica,
+  linkFicha = false,
+}: {
+  dados: DadosEditorDocumento;
+  pessoa: string;
+  /** Quando informado, o próprio conteúdo (célula da grade) abre o editor. */
+  celula?: ReactNode;
+  classeCelula?: string;
+  dica?: string;
+  /** Mostra o atalho para a ficha individual dentro do editor. */
+  linkFicha?: boolean;
+}) {
   const [aberto, setAberto] = useState(false);
   const [, enviar, pendente] = useActionState(
     async (anterior: unknown, dados: FormData) => {
@@ -56,15 +73,27 @@ export function EditorDocumento({ dados, pessoa }: { dados: DadosEditorDocumento
 
   return (
     <>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        aria-label={`Editar ${dados.tipoNome}`}
-        title={`Editar ${dados.tipoNome}`}
-        onClick={() => setAberto(true)}
-      >
-        <Pencil />
-      </Button>
+      {celula !== undefined ? (
+        <button
+          type="button"
+          title={dica ? `${dica} · clique para editar` : `Editar ${dados.tipoNome}`}
+          aria-label={`Editar ${dados.tipoNome} de ${pessoa}`}
+          onClick={() => setAberto(true)}
+          className={`block w-full cursor-pointer outline-none hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring ${classeCelula ?? ""}`}
+        >
+          {celula}
+        </button>
+      ) : (
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          aria-label={`Editar ${dados.tipoNome}`}
+          title={`Editar ${dados.tipoNome}`}
+          onClick={() => setAberto(true)}
+        >
+          <Pencil />
+        </Button>
+      )}
 
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent>
@@ -123,7 +152,16 @@ export function EditorDocumento({ dados, pessoa }: { dados: DadosEditorDocumento
               />
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {linkFicha ? (
+                <Link
+                  href={`/gestao/documentos/${dados.efetivoId}`}
+                  className="mr-auto inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  <FileUser className="size-4" aria-hidden />
+                  Ficha da pessoa
+                </Link>
+              ) : null}
               <Button type="button" variant="ghost" onClick={() => setAberto(false)}>
                 Cancelar
               </Button>
