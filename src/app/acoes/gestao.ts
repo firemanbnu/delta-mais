@@ -107,6 +107,55 @@ export async function salvarDocumentoAction(_estado: unknown, dados: FormData): 
   }
 }
 
+const dataDocumentoSchema = z.object({
+  efetivoId: z.number().int().positive(),
+  tipoId: z.number().int().positive(),
+  data: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+    .nullable(),
+});
+
+/**
+ * Edição rápida só da data (ficha individual). Com data, o documento passa a
+ * "Entregue"; sem data, a situação registrada é mantida.
+ */
+export async function salvarDataDocumentoAction(entrada: {
+  efetivoId: number;
+  tipoId: number;
+  data: string | null;
+}): Promise<Resultado> {
+  await exigirGestao();
+  const valido = dataDocumentoSchema.safeParse(entrada);
+  if (!valido.success) return primeiroErro(valido.error);
+  const { efetivoId, tipoId, data } = valido.data;
+
+  const db = getDb();
+  try {
+    const [atual] = await db
+      .select({ id: documentosPessoa.id, situacao: documentosPessoa.situacao })
+      .from(documentosPessoa)
+      .where(and(eq(documentosPessoa.efetivoId, efetivoId), eq(documentosPessoa.tipoId, tipoId)))
+      .limit(1);
+    const valores = {
+      data,
+      ...(data ? { situacao: "ENTREGUE" as const } : {}),
+      origem: "MANUAL",
+      atualizadoEm: new Date(),
+    };
+    if (atual) {
+      await db.update(documentosPessoa).set(valores).where(eq(documentosPessoa.id, atual.id));
+    } else {
+      await db
+        .insert(documentosPessoa)
+        .values({ efetivoId, tipoId, situacao: data ? "ENTREGUE" : "FALTA", ...valores });
+    }
+    return ok(data ? "Data atualizada." : "Data removida.");
+  } catch (erro) {
+    return falhar(erro);
+  }
+}
+
 const tipoSchema = z.object({
   id: z.coerce.number().int().positive(),
   nome: z.string().trim().min(2, "Informe o nome do documento."),
