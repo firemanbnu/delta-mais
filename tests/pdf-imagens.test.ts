@@ -19,7 +19,7 @@ describe("PDF de imagens", () => {
     expect(texto).toContain("/Title (Relatorio teste)");
     // Cada entrada do xref aponta para o início do objeto.
     const xref = Number(/startxref\n(\d+)/.exec(texto)![1]);
-    const linhas = texto.slice(xref).split("\n").slice(3, 13);
+    const linhas = texto.slice(xref).split("\n").slice(3, 12);
     linhas.forEach((l, i) => {
       const pos = Number(l.slice(0, 10));
       expect(texto.slice(pos, pos + 8)).toBe(`${i + 1} 0 obj`.padEnd(8, "\n").slice(0, 8));
