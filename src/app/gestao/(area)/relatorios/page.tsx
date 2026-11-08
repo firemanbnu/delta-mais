@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowLeft, FileBarChart } from "lucide-react";
 
 import { BotaoImagemEscala } from "@/components/escala/botao-imagem-escala";
+import { BotaoPdfRelatorio } from "@/components/gestao/botao-pdf-relatorio";
 import { BotaoImprimir } from "@/components/escala/botao-imprimir";
 import { CLASSE_SELECT, dataBR } from "@/components/gestao/comum";
 import { BarraSituacao, Legenda } from "@/components/gestao/painel";
@@ -99,6 +100,12 @@ export default async function Relatorios({ searchParams }: PageProps<"/gestao/re
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <BotaoImprimir />
+          <BotaoPdfRelatorio
+            alvoId="relatorio"
+            nomeArquivo={nomeArquivo.replace(/\.png$/i, "") + ".pdf"}
+            titulo={`Relatório: ${ROTULO_MODELO[filtros.modelo]}`}
+            paisagem={paisagem}
+          />
           <BotaoImagemEscala
             alvoId="relatorio"
             nomeArquivo={nomeArquivo}
