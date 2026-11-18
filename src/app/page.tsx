@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarRange, ChartNoAxesCombined, ChevronRight, ClipboardList, Lock } from "lucide-react";
+import { CalendarRange, ChartNoAxesCombined, ChevronRight, ClipboardList, Lock, Sunrise } from "lucide-react";
 
 import { lerConfiguracoes } from "@/db/repositorio";
 import {
@@ -24,6 +24,15 @@ export default async function Entrada() {
   );
 
   const areas = [
+    {
+      href: "/dia",
+      titulo: "Painel do dia",
+      descricao:
+        "Plantão atual e os próximos 3: PTR-BA, trocas de serviço, atestados e e-mails da equipe.",
+      detalhe: "Área protegida por senha.",
+      icone: Sunrise,
+      cor: "text-amber-500 bg-amber-500/10",
+    },
     {
       href: "/plantao",
       titulo: "Escalas",
@@ -62,7 +71,7 @@ export default async function Entrada() {
         <h1 className="text-2xl font-semibold tracking-tight">No que você vai trabalhar?</h1>
       </header>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {areas.map(({ href, titulo, descricao, detalhe, icone: Icone, cor }) => (
           <Link
             key={href}
