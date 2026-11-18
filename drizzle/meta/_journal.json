@@ -57,6 +57,13 @@
       "when": 1794044993542,
       "tag": "0007_avaliacao_pares",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794992499199,
+      "tag": "0008_painel_do_dia",
+      "breakpoints": true
     }
   ]
 }

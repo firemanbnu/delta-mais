@@ -446,6 +446,65 @@ export const avaliacoesParesNotas = pgTable(
   (t) => [index("avaliacoes_pares_notas_ciclo_avaliado_idx").on(t.ciclo, t.avaliadoId)],
 );
 
+/**
+ * Painel do dia: trocas de serviço combinadas para cada noite de plantão.
+ * Os nomes são texto livre porque quem entra pode ser de outra equipe.
+ */
+export const trocasServico = pgTable(
+  "trocas_servico",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    data: date("data").notNull(),
+    sai: text("sai").notNull(),
+    entra: text("entra").notNull(),
+    observacao: text("observacao"),
+    criadoEm: timestamp("criado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("trocas_servico_data_idx").on(t.data)],
+);
+
+/**
+ * Programação de PTR-BA por noite (tabela "Escala Delta" do mês).
+ * `ordem` 1 a 3 são as instruções; `ordem` 0 guarda a atividade física do dia.
+ */
+export const ptrbaProgramacao = pgTable(
+  "ptrba_programacao",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    data: date("data").notNull(),
+    ordem: integer("ordem").notNull(),
+    assunto: text("assunto").notNull(),
+    instrutor: text("instrutor"),
+    atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("ptrba_programacao_data_ordem_idx").on(t.data, t.ordem)],
+);
+
+/** E-mails do Gmail da equipe, copiados por uma tarefa agendada do Claude. */
+export const painelEmails = pgTable(
+  "painel_emails",
+  {
+    id: text("id").primaryKey(),
+    threadId: text("thread_id"),
+    de: text("de").notNull(),
+    assunto: text("assunto").notNull(),
+    trecho: text("trecho"),
+    recebidoEm: timestamp("recebido_em", { withTimezone: true }).notNull(),
+    link: text("link"),
+    naoLido: boolean("nao_lido").notNull().default(false),
+    importante: boolean("importante").notNull().default(false),
+    importadoEm: timestamp("importado_em", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("painel_emails_recebido_idx").on(t.recebidoEm)],
+);
+
+/** Quando cada fonte externa do painel foi atualizada pela última vez. */
+export const painelSincronizacao = pgTable("painel_sincronizacao", {
+  fonte: text("fonte").primaryKey(),
+  atualizadoEm: timestamp("atualizado_em", { withTimezone: true }).notNull().defaultNow(),
+  detalhe: text("detalhe"),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   people: many(people),
 }));

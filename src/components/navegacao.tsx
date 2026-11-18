@@ -12,6 +12,7 @@ import {
   Flame,
   House,
   LayoutDashboard,
+  Sunrise,
   Settings,
   Truck,
   UserRound,
@@ -20,6 +21,7 @@ import {
 
 const ITENS_ESCALAS = [
   { href: "/plantao", rotulo: "Painel", icone: LayoutDashboard },
+  { href: "/dia", rotulo: "Painel do dia", icone: Sunrise },
   { href: "/escala", rotulo: "Escalas", icone: CalendarRange },
   { href: "/pessoas", rotulo: "Quadro", icone: UserRound },
   { href: "/ausencias", rotulo: "Férias e atestados", icone: CalendarDays },
@@ -33,6 +35,13 @@ const ITENS_GESTAO = [
   { href: "/gestao/relatorios", rotulo: "Relatórios", icone: FileBarChart },
   { href: "/gestao/catalogo", rotulo: "Catálogo", icone: BookCheck },
   { href: "/gestao/efetivo", rotulo: "Efetivo", icone: UsersRound },
+] as const;
+
+const ITENS_DIA = [
+  { href: "/dia", rotulo: "Painel do dia", icone: Sunrise },
+  { href: "/plantao", rotulo: "Escalas", icone: CalendarRange },
+  { href: "/ausencias", rotulo: "Férias e atestados", icone: CalendarDays },
+  { href: "/gestao", rotulo: "Gestão", icone: LayoutDashboard },
 ] as const;
 
 const ITENS_DESEMPENHO = [
@@ -53,8 +62,15 @@ export function Navegacao() {
   const pathname = usePathname();
   const naGestao = pathname.startsWith("/gestao");
   const noDesempenho = pathname.startsWith("/desempenho");
+  const noDia = pathname === "/dia" || pathname.startsWith("/dia/");
   const naEntrada = pathname === "/";
-  const itens = noDesempenho ? ITENS_DESEMPENHO : naGestao ? ITENS_GESTAO : ITENS_ESCALAS;
+  const itens = noDia
+    ? ITENS_DIA
+    : noDesempenho
+      ? ITENS_DESEMPENHO
+      : naGestao
+        ? ITENS_GESTAO
+        : ITENS_ESCALAS;
 
   // Link de formulário enviado aos colegas: nenhuma navegação para o resto do sistema.
   if (pathname.startsWith("/avaliar")) return null;
@@ -67,7 +83,9 @@ export function Navegacao() {
           <span>
             Delta Mais
             <span className="ml-2 hidden text-xs font-normal text-muted-foreground sm:inline">
-              {noDesempenho
+              {noDia
+                ? "painel do dia"
+                : noDesempenho
                 ? "avaliação de desempenho"
                 : naGestao
                   ? "gestão do efetivo"
