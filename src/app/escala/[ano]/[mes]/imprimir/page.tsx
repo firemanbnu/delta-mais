@@ -314,7 +314,7 @@ export default async function PaginaImprimir({
 /** Aviso da conservação: fica ao lado do título da escala de rádio. */
 function ObservacaoConservacao({ className = "" }: { className?: string }) {
   return (
-    <p className={`border-2 border-black px-2 py-1.5 text-xs font-semibold ${className}`}>
+    <p className={`border-2 border-black bg-yellow-300 px-2 py-1.5 text-xs font-semibold text-black ${className}`}>
       OBSERVAÇÃO: a limpeza e a organização devem ser feitas após as 06h00, para que a passagem
       de turno aconteça com as áreas limpas e organizadas.
     </p>
