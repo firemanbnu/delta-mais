@@ -253,6 +253,10 @@ export default async function PaginaImprimir({
                 ].join("; ")}
               </p>
             ) : null}
+            <p className="mt-2 border-2 border-black px-2 py-1.5 text-xs font-semibold">
+              OBSERVAÇÃO: a limpeza e a organização devem ser feitas após as 06h00, para que a
+              passagem de turno aconteça com as áreas limpas e organizadas.
+            </p>
           </section>
         </article>
 
