@@ -221,7 +221,7 @@ export default async function PaginaImprimir({
 
           <section className="mt-6">
             <h2 className="text-sm font-bold uppercase">
-              Faxina{abastecimento.length > 0 ? " e abastecimento" : ""}
+              Conservação
             </h2>
             <table className="mt-2 w-full table-fixed border-collapse text-xs">
               <tbody>
@@ -253,20 +253,20 @@ export default async function PaginaImprimir({
                 ].join("; ")}
               </p>
             ) : null}
-            <p className="mt-2 border-2 border-black px-2 py-1.5 text-xs font-semibold">
-              OBSERVAÇÃO: a limpeza e a organização devem ser feitas após as 06h00, para que a
-              passagem de turno aconteça com as áreas limpas e organizadas.
-            </p>
+            {radio && radio.noites.length > 0 ? null : <ObservacaoConservacao className="mt-2" />}
           </section>
         </article>
 
         {radio && radio.noites.length > 0 ? (
           <article className="impressao mx-auto mt-6 max-w-6xl rounded-xl border bg-white p-8 text-black">
-            <header className="border-b-2 border-black pb-3">
-              <h1 className="text-xl font-bold uppercase tracking-wide">Escala de Rádio</h1>
-              <p className="mt-1 text-sm">
-                {rotuloMesCurto(anoNum, mesNum)} · {radio.noites.length} noites de rádio
-              </p>
+            <header className="flex items-start justify-between gap-4 border-b-2 border-black pb-3">
+              <div className="shrink-0">
+                <h1 className="text-xl font-bold uppercase tracking-wide">Escala de Rádio</h1>
+                <p className="mt-1 text-sm">
+                  {rotuloMesCurto(anoNum, mesNum)} · {radio.noites.length} noites de rádio
+                </p>
+              </div>
+              <ObservacaoConservacao className="max-w-md" />
             </header>
 
             {layoutRadio === "vertical" ? (
@@ -308,6 +308,16 @@ export default async function PaginaImprimir({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Aviso da conservação: fica ao lado do título da escala de rádio. */
+function ObservacaoConservacao({ className = "" }: { className?: string }) {
+  return (
+    <p className={`border-2 border-black px-2 py-1.5 text-xs font-semibold ${className}`}>
+      OBSERVAÇÃO: a limpeza e a organização devem ser feitas após as 06h00, para que a passagem
+      de turno aconteça com as áreas limpas e organizadas.
+    </p>
   );
 }
 
